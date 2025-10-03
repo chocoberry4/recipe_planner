@@ -5,11 +5,10 @@ An easy to use meal planner, pantry tracker, recipe library all in one. I would 
 ## ✨ Features
 
 - 📖 **Recipe Management** - Store and organize your favorite recipes
-- 🛒 **Smart Shopping Lists** - Auto-generate shopping lists from meal plans  
+- 🛒 **Smart Shopping Lists** - Auto-generate shopping lists from meal plans
 - 📅 **Weekly Meal Planning** - Plan your week ahead with a visual calendar
 - 🥫 **Pantry Tracking** - Keep track of what's in your kitchen
 - ⭐ **Recipe Discovery** - Find new recipes to try
-
 
 ## 🚀 Tech Stack
 
@@ -24,9 +23,8 @@ An easy to use meal planner, pantry tracker, recipe library all in one. I would 
     - Vite (build tool)
 
     Deployment:
-    - Docker 
+    - Docker
     - Kubernetes
-
 
 ## Prerequisites
 
@@ -45,21 +43,26 @@ An easy to use meal planner, pantry tracker, recipe library all in one. I would 
     npm install
 
 ## Setup database (using Docker)
+
     docker-compose up -d
-    
+
     rails db:create db:migrate db:seed
 
 ## Start development servers
-    bin/rails s  
+
+    bin/rails s (backend server)
+    bin/vite dev (frontend server)
 
 ## Features (Current + Planned)
 
 Current:
- - User authentication
- - Recipe management
- - Shopping list generation
- 
+
+- User authentication
+- Recipe management
+- Shopping list generation
+
 Planned:
- - Weekly meal planning
- - Pantry tracking
- - Recipe discovery
+
+- Weekly meal planning
+- Pantry tracking
+- Recipe discovery
