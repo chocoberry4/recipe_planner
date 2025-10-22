@@ -1,6 +1,6 @@
 source "https://rubygems.org"
 
-gem "rails", "~> 8.0.3"
+gem "rails", "~> 8.1.0"
 
 gem "bcrypt"
 # Reduces boot times through caching; required in config/boot.rb
