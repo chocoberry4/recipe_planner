@@ -5,7 +5,9 @@
       "Bash(docker-compose run:*)",
       "Bash(docker-compose up:*)",
       "Bash(docker-compose logs:*)",
-      "Bash(bin/rubocop*)"
+      "Bash(bin/rubocop*)",
+      "Bash(bundle update:*)",
+      "Bash(bundle exec:*)"
     ],
     "deny": [],
     "ask": []
