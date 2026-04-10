@@ -21,7 +21,7 @@ gem "vite_rails", "~> 3.0"
 group :development, :test do
   gem "bundler-audit", require: false
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
-  gem "brakeman", "~> 8.0",require: false
+  gem "brakeman", "~> 8.0", require: false
   gem "rubocop-rails-omakase", require: false
   gem "rspec-rails", "~> 8.0.0"
 end
