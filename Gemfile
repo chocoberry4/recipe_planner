@@ -6,7 +6,7 @@ gem "bcrypt"
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 
-gem "pg", "~> 1.1"
+gem "pg", "~> 1.6"
 gem "puma", ">= 5.0"
 gem "rack-cors"
 gem "rubocop", require: false
