@@ -31,6 +31,9 @@
 # Ignore master key for decrypting credentials and more.
 /config/master.key
 
+# Ignore Kubernetes secrets
+/k8s/secrets.yml
+
 # Vite Ruby
 /public/vite*
 node_modules
