@@ -1,0 +1,193 @@
+---
+# Rails Application Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recipe-planner
+  labels:
+    app: recipe-planner
+spec:
+  replicas: 2  # Run 2 replicas for high availability
+  selector:
+    matchLabels:
+      app: recipe-planner
+  template:
+    metadata:
+      labels:
+        app: recipe-planner
+    spec:
+      initContainers:
+      # Init container to run database migrations before starting the app
+      - name: db-migrate
+        image: recipe-planner:latest
+        command: ["bundle", "exec", "rails", "db:migrate"]
+        env:
+        - name: RAILS_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-planner-config
+              key: RAILS_ENV
+        - name: DATABASE_URL
+          value: "postgres://$(DATABASE_USER):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)"
+        - name: DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-planner-config
+              key: DATABASE_HOST
+        - name: DATABASE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-planner-config
+              key: DATABASE_PORT
+        - name: DATABASE_NAME
+          valueFrom:
+            secretKeyRef:
+              name: recipe-planner-secrets
+              key: database-name
+        - name: DATABASE_USER
+          valueFrom:
+            secretKeyRef:
+              name: recipe-planner-secrets
+              key: database-user
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: recipe-planner-secrets
+              key: database-password
+        - name: RAILS_MASTER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: recipe-planner-secrets
+              key: rails-master-key
+        - name: SECRET_KEY_BASE
+          valueFrom:
+            secretKeyRef:
+              name: recipe-planner-secrets
+              key: secret-key-base
+      containers:
+      - name: recipe-planner
+        image: recipe-planner:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        # Import all config from ConfigMap
+        - name: RAILS_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-planner-config
+              key: RAILS_ENV
+        - name: RAILS_LOG_TO_STDOUT
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-planner-config
+              key: RAILS_LOG_TO_STDOUT
+        - name: RAILS_SERVE_STATIC_FILES
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-planner-config
+              key: RAILS_SERVE_STATIC_FILES
+        - name: SOLID_QUEUE_IN_PUMA
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-planner-config
+              key: SOLID_QUEUE_IN_PUMA
+        - name: RAILS_MAX_THREADS
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-planner-config
+              key: RAILS_MAX_THREADS
+        - name: WEB_CONCURRENCY
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-planner-config
+              key: WEB_CONCURRENCY
+        - name: RAILS_HOSTNAME
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-planner-config
+              key: RAILS_HOSTNAME
+        # Database configuration
+        - name: DATABASE_URL
+          value: "postgres://$(DATABASE_USER):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)"
+        - name: DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-planner-config
+              key: DATABASE_HOST
+        - name: DATABASE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: recipe-planner-config
+              key: DATABASE_PORT
+        - name: DATABASE_NAME
+          valueFrom:
+            secretKeyRef:
+              name: recipe-planner-secrets
+              key: database-name
+        - name: DATABASE_USER
+          valueFrom:
+            secretKeyRef:
+              name: recipe-planner-secrets
+              key: database-user
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: recipe-planner-secrets
+              key: database-password
+        # Rails secrets
+        - name: RAILS_MASTER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: recipe-planner-secrets
+              key: rails-master-key
+        - name: SECRET_KEY_BASE
+          valueFrom:
+            secretKeyRef:
+              name: recipe-planner-secrets
+              key: secret-key-base
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /up
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /up
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: storage
+          mountPath: /rails/storage
+      volumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: recipe-planner-storage-pvc
+---
+# Persistent Volume Claim for uploaded files (recipe images, etc.)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: recipe-planner-storage-pvc
+  labels:
+    app: recipe-planner
+spec:
+  accessModes:
+    - ReadWriteMany  # Multiple pods need to access the same storage
+  resources:
+    requests:
+      storage: 20Gi

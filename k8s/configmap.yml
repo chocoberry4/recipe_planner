@@ -1,0 +1,27 @@
+---
+# ConfigMap for non-sensitive application configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: recipe-planner-config
+  labels:
+    app: recipe-planner
+data:
+  # Rails environment
+  RAILS_ENV: "production"
+  RAILS_LOG_TO_STDOUT: "true"
+  RAILS_SERVE_STATIC_FILES: "true"
+
+  # Database configuration
+  DATABASE_HOST: "postgres"
+  DATABASE_PORT: "5432"
+
+  # Solid Queue configuration
+  SOLID_QUEUE_IN_PUMA: "true"
+
+  # Rails settings
+  RAILS_MAX_THREADS: "5"
+  WEB_CONCURRENCY: "2"
+
+  # Application URL (update this with your domain)
+  RAILS_HOSTNAME: "recipe-planner.example.com"

@@ -1,0 +1,49 @@
+---
+# Ingress for external access with SSL/TLS
+# Requires NGINX Ingress Controller to be installed in the cluster
+# Install with: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.0/deploy/static/provider/cloud/deploy.yaml
+#
+# For SSL/TLS, you can use:
+# 1. cert-manager for automatic Let's Encrypt certificates
+# 2. Manual certificate via kubectl create secret tls
+#
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: recipe-planner-ingress
+  labels:
+    app: recipe-planner
+  annotations:
+    # NGINX specific annotations
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+    # Rate limiting (optional)
+    nginx.ingress.kubernetes.io/limit-rps: "10"
+
+    # Client body size limit for file uploads
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+
+    # Enable CORS if needed (uncomment if your Vue.js frontend is on a different domain)
+    # nginx.ingress.kubernetes.io/enable-cors: "true"
+    # nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+
+    # For automatic SSL with cert-manager (uncomment when cert-manager is installed)
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - recipe-planner.example.com  # CHANGE THIS to your domain
+    secretName: recipe-planner-tls  # SSL certificate secret
+  rules:
+  - host: recipe-planner.example.com  # CHANGE THIS to your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: recipe-planner
+            port:
+              number: 80
