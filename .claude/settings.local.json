@@ -4,7 +4,8 @@
       "Bash(bin/rails generate:*)",
       "Bash(docker-compose run:*)",
       "Bash(docker-compose up:*)",
-      "Bash(docker-compose logs:*)"
+      "Bash(docker-compose logs:*)",
+      "Bash(bin/rubocop*)"
     ],
     "deny": [],
     "ask": []

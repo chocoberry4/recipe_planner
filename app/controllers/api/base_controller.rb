@@ -23,7 +23,7 @@ class API::BaseController < ApplicationController
   end
 
   def unprocessable_entity
-    render json: { error: "Unprocessable Entity" }, status: :unprocessable_entity   
+    render json: { error: "Unprocessable Entity" }, status: :unprocessable_entity
   end
 
   def conflict

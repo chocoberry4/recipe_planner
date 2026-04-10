@@ -4,10 +4,10 @@ Rails.application.routes.draw do
       resources :users
       resources :recipes
       resources :ingredients
-      
-      post 'login', to: 'auth#login'
-      post 'signup', to: 'auth#signup'
-      delete 'logout', to: 'auth#logout'
+
+      post "login", to: "auth#login"
+      post "signup", to: "auth#signup"
+      delete "logout", to: "auth#logout"
     end
   end
 end
