@@ -28,5 +28,17 @@ module RecipePlanner
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # Cookie-based sessions are used for authentication (see
+    # docs/adr/0001-cookie-session-auth.md), so the session/cookie middleware
+    # that API-only mode skips by default needs to be added back explicitly.
+    # `secure` is left off in development/test so cookies still work over
+    # plain HTTP; production terminates SSL and forces secure cookies.
+    config.session_store :cookie_store,
+      key: "_recipe_planner_session",
+      same_site: :lax,
+      secure: Rails.env.production?
+    config.middleware.use ActionDispatch::Cookies
+    config.middleware.use config.session_store, config.session_options
   end
 end

@@ -9,6 +9,14 @@ class Api::BaseController < ApplicationController
 
 
   protect_from_forgery with: :exception
+  # `protect_from_forgery` unconditionally sets `allow_forgery_protection = true`,
+  # but this controller reaches ActionController::RequestForgeryProtection via a
+  # manual `include` (this app is API-only, so it isn't ActionController::Base),
+  # which means it never goes through the Railtie hook that normally syncs this
+  # attribute from `config.action_controller.allow_forgery_protection`. Without
+  # this line, forgery protection stays hardcoded on even in the test environment
+  # (config/environments/test.rb sets it to false).
+  self.allow_forgery_protection = Rails.application.config.action_controller.allow_forgery_protection
 
   before_action :set_csrf_cookie
 
@@ -16,6 +24,14 @@ class Api::BaseController < ApplicationController
 
   def set_csrf_cookie
     cookies["CSRF-TOKEN"] = form_authenticity_token
+  end
+
+  def current_user
+    @current_user ||= User.find_by(id: session[:user_id])
+  end
+
+  def require_login
+    render json: { error: "Not authorized" }, status: :unauthorized unless current_user
   end
 
   def not_found

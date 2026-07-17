@@ -1,6 +1,9 @@
 module Api
   module V1
     class RecipesController < Api::BaseController
+      # Recipe browsing (index/show) stays public; mutating a recipe requires
+      # a logged-in user since recipes belong to one (see Recipe#user).
+      before_action :require_login, only: %i[create update destroy]
       before_action :find_recipe, only: %i[show update destroy]
       def index
         recipes = Recipe.all

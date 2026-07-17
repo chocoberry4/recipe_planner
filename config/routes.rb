@@ -8,6 +8,7 @@ Rails.application.routes.draw do
       post "login", to: "auth#login"
       post "signup", to: "auth#signup"
       delete "logout", to: "auth#logout"
+      get "me", to: "auth#me"
     end
   end
 
