@@ -36,3 +36,5 @@ Both tracks' own work was solid on inspection. Three real bugs only showed up on
 3. **Track A's `require_login` on recipe mutations wasn't reflected in Track B's mutation specs** (written in parallel, before either could see the other's final state) — fixed by adding a `log_in_as` helper to `spec/requests/recipe_spec.rb`.
 
 Full suite: 37 examples, 0 failures, 3 pending (2 are the known `recipe_params` bug, tracked separately; 1 is a pre-existing unrelated placeholder spec).
+
+**Update:** the `recipe_params` bug is now fixed — `recipe_params` permits `:title`/`:description`, and `RecipesController#create` sets the owner from `current_user` rather than a client-supplied `user_id`. Full suite: 37 examples, 0 failures, 1 pending (the unrelated placeholder spec only).

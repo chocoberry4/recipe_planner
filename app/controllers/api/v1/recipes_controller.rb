@@ -15,7 +15,7 @@ module Api
       end
 
       def create
-        recipe = Recipe.new(recipe_params)
+        recipe = current_user.recipes.build(recipe_params)
         if recipe.save
           render json: recipe, status: :created, serializer: RecipeSerializer
         else
@@ -42,7 +42,10 @@ module Api
       private
 
       def recipe_params
-        params.require(:recipe).permit(:name, :description, :ingredients, :instructions)
+        # Owner is set from current_user (see #create), not a client-supplied
+        # param. Nested ingredients/instructions have no accepts_nested_attributes_for
+        # setup yet, so they aren't accepted here — that's Unit 02 Slice B / import.
+        params.require(:recipe).permit(:title, :description)
       end
 
       def find_recipe

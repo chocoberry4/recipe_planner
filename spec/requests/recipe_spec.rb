@@ -64,21 +64,16 @@ RSpec.describe "Recipes", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
     end
 
-    # KNOWN BUG (out of scope for this unit, tracked separately):
-    # RecipesController#recipe_params permits :name instead of :title, and
-    # never permits/sets :user_id. Since Recipe requires both a title and a
-    # user, creation against the correct schema currently fails validation
-    # and returns 422 instead of 201. This spec documents the intended,
-    # correct behavior and is marked pending until recipe_params is fixed.
-    it "creates a new recipe", pending: "recipe_params permits :name instead of :title and never sets user_id" do
+    it "creates a new recipe owned by the logged-in user" do
       user = create(:user)
       log_in_as(user)
 
-      post "/api/v1/recipes", params: { recipe: { title: "Tacos", description: "Weeknight tacos", user_id: user.id } }
+      post "/api/v1/recipes", params: { recipe: { title: "Tacos", description: "Weeknight tacos" } }
 
       expect(response).to have_http_status(:created)
       body = JSON.parse(response.body)
       expect(body["title"]).to eq("Tacos")
+      expect(Recipe.find(body["id"]).user).to eq(user)
     end
   end
 
@@ -92,10 +87,7 @@ RSpec.describe "Recipes", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
     end
 
-    # KNOWN BUG (out of scope for this unit, tracked separately): see note
-    # above on the POST spec. recipe_params permits :name instead of :title,
-    # so title updates are silently dropped rather than applied.
-    it "updates the recipe", pending: "recipe_params permits :name instead of :title, so title updates are dropped" do
+    it "updates the recipe" do
       recipe = create(:recipe)
       log_in_as(recipe.user)
 
