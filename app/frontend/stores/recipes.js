@@ -49,5 +49,48 @@ export const useRecipesStore = defineStore('recipes', {
       if (response.ok) this.current = null
       return { ok: response.ok }
     },
+
+    async importFromUrl(url) {
+      return importRecipe({ url })
+    },
+
+    async importFromText({ title, description, ingredients_text, instructions_text }) {
+      return importRecipe({ title, description, ingredients_text, instructions_text })
+    },
+
+    async saveAssignments(recipeId, assignments) {
+      const response = await fetch(`/api/v1/recipes/${recipeId}/instruction_ingredients`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken(),
+        },
+        body: JSON.stringify({ assignments }),
+      })
+      const body = await response.json().catch(() => ({}))
+
+      if (response.ok) {
+        this.current = body
+        return { ok: true, recipe: body }
+      }
+      return { ok: false, error: body.error || 'Something went wrong' }
+    },
   },
 })
+
+async function importRecipe(payload) {
+  const response = await fetch('/api/v1/recipes/import', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken(),
+    },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+
+  if (response.ok) return { ok: true, recipe: body }
+  return { ok: false, error: body.error || 'Something went wrong' }
+}

@@ -1,12 +1,20 @@
 <template>
   <div class="flex items-center justify-between">
     <h1 class="font-display text-3xl font-semibold text-ink">Recipes</h1>
-    <router-link
-      to="/recipes/new"
-      class="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-dark transition-colors"
-    >
-      New recipe
-    </router-link>
+    <div class="flex gap-2">
+      <router-link
+        to="/recipes/import"
+        class="rounded-full border border-line px-4 py-2 text-sm font-medium text-ink hover:border-accent hover:text-accent transition-colors"
+      >
+        Import
+      </router-link>
+      <router-link
+        to="/recipes/new"
+        class="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-dark transition-colors"
+      >
+        New recipe
+      </router-link>
+    </div>
   </div>
 
   <p v-if="loading" class="mt-8 text-ink/50">Loading...</p>

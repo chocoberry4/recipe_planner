@@ -44,3 +44,6 @@ CLAUDE.md
 
 # oh-my-claudecode local session state
 /.omc/
+
+# Playwright MCP browser verification artifacts (screenshots/snapshots)
+/.playwright-mcp/

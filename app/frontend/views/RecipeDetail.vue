@@ -10,6 +10,13 @@
 
       <div v-if="isOwner" class="flex shrink-0 gap-2 text-sm">
         <router-link
+          v-if="recipe.instructions.length"
+          :to="`/recipes/${recipe.id}/review`"
+          class="rounded-full border border-line px-3.5 py-1.5 text-ink hover:border-accent hover:text-accent transition-colors"
+        >
+          Review ingredients
+        </router-link>
+        <router-link
           :to="`/recipes/${recipe.id}/edit`"
           class="rounded-full border border-line px-3.5 py-1.5 text-ink hover:border-accent hover:text-accent transition-colors"
         >

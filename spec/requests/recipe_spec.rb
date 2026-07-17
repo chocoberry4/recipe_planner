@@ -48,6 +48,21 @@ RSpec.describe "Recipes", type: :request do
       expect(body["ingredients"].map { |i| i["id"] }).to contain_exactly(ungrouped_ingredient.id)
     end
 
+    it "serializes each instruction's assigned recipe_ingredient_ids" do
+      recipe = create(:recipe)
+      salt_ri = create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "salt"))
+      unresolved_ri = create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "pepper"))
+      step = create(:instruction, recipe: recipe)
+      create(:instruction_ingredient, instruction: step, recipe_ingredient: salt_ri)
+
+      get "/api/v1/recipes/#{recipe.id}"
+
+      body = JSON.parse(response.body)
+      step_json = body["instructions"].find { |i| i["id"] == step.id }
+      expect(step_json["recipe_ingredient_ids"]).to eq([ salt_ri.id ])
+      expect(body["ingredients"].map { |i| i["id"] }).to include(unresolved_ri.id)
+    end
+
     it "returns not_found for a missing recipe" do
       get "/api/v1/recipes/999999"
 

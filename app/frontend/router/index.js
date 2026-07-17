@@ -5,8 +5,10 @@ const routes = [
   { path: '/', name: "Home", component: () =>  import ('../views/Home.vue') } ,
   { path: '/recipes', name: "Recipes", component: () =>  import ('../views/Recipes.vue'), meta: { requiresAuth: true } } ,
   { path: '/recipes/new', name: "NewRecipe", component: () => import('../views/RecipeForm.vue'), meta: { requiresAuth: true } },
+  { path: '/recipes/import', name: "ImportRecipe", component: () => import('../views/RecipeImport.vue'), meta: { requiresAuth: true } },
   { path: '/recipes/:id', name: "RecipeDetail", component: () => import('../views/RecipeDetail.vue'), meta: { requiresAuth: true } },
   { path: '/recipes/:id/edit', name: "EditRecipe", component: () => import('../views/RecipeForm.vue'), meta: { requiresAuth: true } },
+  { path: '/recipes/:id/review', name: "RecipeReview", component: () => import('../views/RecipeReview.vue'), meta: { requiresAuth: true } },
   { path: '/login', name: "Login", component: () => import('../views/Login.vue') },
   { path: '/signup', name: "Signup", component: () => import('../views/Signup.vue') },
 ]

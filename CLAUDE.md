@@ -164,10 +164,13 @@ See [k8s/README.md](k8s/README.md) for Kubernetes deployment instructions includ
 - **`recipe_params` bug — fixed**: now permits `:title`/`:description`; owner is set from `current_user` (not a client-supplied `user_id`) in `RecipesController#create`.
 - **Bolt 004 (ingredient-line parser) — done**: `IngredientLineParser` service object (`app/services/ingredient_line_parser.rb`) turns a raw ingredient string into `quantity`/`unit`/`name`/`preparation`. See `docs/bolts/bolt-004-ingredient-line-parser/plan.md`.
 - **Bolt 005 (autosort matching engine) — done**: `RecipeAutosorter` service object (`app/services/recipe_autosorter.rb`) implements the tiered structural/group-prose/fuzzy/unresolved matching algorithm, populating `instruction_ingredients`. See `docs/bolts/bolt-005-autosort-matching-engine/plan.md` for the matching-threshold scope decision.
-- **Bolt 006 (recipe import) — done**: `JsonLdRecipeExtractor` + `RecipeImporter` (`app/services/`), `POST /api/v1/recipes/import` (URL or manual-paste text), both paths running `IngredientLineParser` + `RecipeAutosorter`. Includes an SSRF guard on the URL path and a `RecipeIngredient#quantity` validation fix (now allows `nil`). See `docs/bolts/bolt-006-recipe-import/plan.md`. No frontend import form yet — API/pipeline only.
+- **Bolt 006 (recipe import) — done**: `JsonLdRecipeExtractor` + `RecipeImporter` (`app/services/`), `POST /api/v1/recipes/import` (URL or manual-paste text), both paths running `IngredientLineParser` + `RecipeAutosorter`. Includes an SSRF guard on the URL path and a `RecipeIngredient#quantity` validation fix (now allows `nil`). See `docs/bolts/bolt-006-recipe-import/plan.md`.
+- **Bolt 007 (autosort review UI) — done**: `RecipeImport.vue` (URL/paste-text form) and `RecipeReview.vue` (suggest-and-correct editor per ADR-0004 — assign/remove ingredients per step, Unresolved tray, Save), plus the backend `PATCH /api/v1/recipes/:recipe_id/instruction_ingredients` they call. Verified end-to-end in-browser via Playwright. See `docs/bolts/bolt-007-autosort-review-ui/plan.md` for the "drag" scope decision (implemented as remove-then-add, not HTML5 drag gestures) and a Windows dev-server gotcha it surfaced.
+
+**All of Units 01-07 (the recipe-import/autosort roadmap from `docs/design/recipe-import-and-autosort.md`) are now done.**
 
 ### Next up (per `docs/units/`)
-1. Unit 07 — autosort review UI (frontend: import form for `POST /api/v1/recipes/import`, plus surfacing `RecipeAutosorter`'s Tier 3 unresolved ingredients for manual drag-in, per ADR-0004)
+No unit briefs exist yet for what comes next — pick from "Future Enhancements" below (meal planning, shopping lists, portion scaling, nutritional info are the nearest Phase 1 remainder) or revisit UI polish, since Unit 07 was the first new UI surface since Bolt 003's design pass and hasn't had one.
 
 ### Future Enhancements (Phase 2/3, not yet scheduled into units)
 1. Meal planning calendar, shopping list generation, portion scaling, nutritional info (Phase 1 remainder)

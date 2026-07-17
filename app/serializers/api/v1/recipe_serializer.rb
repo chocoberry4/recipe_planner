@@ -35,7 +35,8 @@ module Api
             step_number: instruction.step_number,
             description: instruction.description,
             duration_minutes: instruction.duration_minutes,
-            recipe_ingredient_group_id: instruction.recipe_ingredient_group_id
+            recipe_ingredient_group_id: instruction.recipe_ingredient_group_id,
+            recipe_ingredient_ids: instruction.instruction_ingredients.order(:id).pluck(:recipe_ingredient_id)
           }
         end
       end
