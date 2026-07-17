@@ -160,10 +160,11 @@ See [k8s/README.md](k8s/README.md) for Kubernetes deployment instructions includ
 ### Status
 - **Bolt 001 (foundations) — done**: cookie-session auth (signup/login/logout, CORS, router guard), and the ingredient-grouping schema (migrations, models, serializer). See `docs/bolts/bolt-001-foundations/tasks.md` for the 3 real bugs verification found and fixed.
 - **Bolt 002 (recipe index) — done**: Vue recipe list page (`app/frontend/views/Recipes.vue`) fetching `GET /api/v1/recipes`.
+- **Bolt 003 (recipe CRUD) — done**: `RecipeDetail.vue`, `RecipeForm.vue` (shared create/edit), delete, `stores/recipes.js`, router routes for `/recipes/new`, `/recipes/:id`, `/recipes/:id/edit`. See `docs/bolts/bolt-003-recipe-crud/plan.md` for a known follow-up (no ownership check on update/destroy — any logged-in user can currently edit/delete any recipe).
 - **`recipe_params` bug — fixed**: now permits `:title`/`:description`; owner is set from `current_user` (not a client-supplied `user_id`) in `RecipesController#create`.
 
 ### Next up (per `docs/units/`)
-1. Unit 02 Slice B — recipe create/edit/detail Vue views
+1. Follow-up: add an ownership check (`require_owner`) to `RecipesController#update`/`#destroy` — see Bolt 003 known gap
 2. Units 04-05 — ingredient-line parser + autosort matching engine (the core differentiator vs. Tandoor, see `docs/design/recipe-import-and-autosort.md`)
 3. Unit 06 — recipe import (JSON-LD first, per `docs/adr/0005-jsonld-first-recipe-import.md`)
 4. Unit 07 — autosort review UI

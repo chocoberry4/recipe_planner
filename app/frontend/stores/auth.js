@@ -1,9 +1,5 @@
 import { defineStore } from 'pinia'
-
-function csrfToken() {
-  const match = document.cookie.match(/(?:^|;\s*)CSRF-TOKEN=([^;]*)/)
-  return match ? decodeURIComponent(match[1]) : null
-}
+import { csrfToken } from '../lib/csrf'
 
 async function submitAuth(url, body) {
   const response = await fetch(url, {

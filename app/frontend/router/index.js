@@ -3,7 +3,10 @@ import { useAuthStore } from '../stores/auth'
 
 const routes = [
   { path: '/', name: "Home", component: () =>  import ('../views/Home.vue') } ,
-  { path: '/recipes', name: "Recipes", component: () =>  import ('../views/Recipes.vue') } ,
+  { path: '/recipes', name: "Recipes", component: () =>  import ('../views/Recipes.vue'), meta: { requiresAuth: true } } ,
+  { path: '/recipes/new', name: "NewRecipe", component: () => import('../views/RecipeForm.vue'), meta: { requiresAuth: true } },
+  { path: '/recipes/:id', name: "RecipeDetail", component: () => import('../views/RecipeDetail.vue'), meta: { requiresAuth: true } },
+  { path: '/recipes/:id/edit', name: "EditRecipe", component: () => import('../views/RecipeForm.vue'), meta: { requiresAuth: true } },
   { path: '/login', name: "Login", component: () => import('../views/Login.vue') },
   { path: '/signup', name: "Signup", component: () => import('../views/Signup.vue') },
 ]
@@ -14,7 +17,7 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  if (to.path !== '/recipes') return true
+  if (!to.meta.requiresAuth) return true
 
   const auth = useAuthStore()
   if (!auth.checked) await auth.fetchCurrentUser()

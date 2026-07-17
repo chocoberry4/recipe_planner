@@ -1,23 +1,47 @@
 <template>
-  <h1>Log in</h1>
+  <div class="max-w-sm mx-auto">
+    <h1 class="font-display text-2xl font-semibold text-ink text-center">Log in</h1>
 
-  <form @submit.prevent="handleSubmit">
-    <p v-if="error">{{ error }}</p>
+    <form class="mt-8 space-y-4" @submit.prevent="handleSubmit">
+      <p v-if="error" class="rounded-lg bg-accent-soft px-3 py-2 text-sm text-accent-dark">
+        {{ error }}
+      </p>
 
-    <label>
-      Email
-      <input v-model="email" type="email" required />
-    </label>
+      <label class="block">
+        <span class="text-sm font-medium text-ink/80">Email</span>
+        <input
+          v-model="email"
+          type="email"
+          required
+          class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+        />
+      </label>
 
-    <label>
-      Password
-      <input v-model="password" type="password" required />
-    </label>
+      <label class="block">
+        <span class="text-sm font-medium text-ink/80">Password</span>
+        <input
+          v-model="password"
+          type="password"
+          required
+          class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+        />
+      </label>
 
-    <button type="submit" :disabled="submitting">Log in</button>
-  </form>
+      <button
+        type="submit"
+        :disabled="submitting"
+        class="w-full rounded-full bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      >
+        Log in
+      </button>
+    </form>
 
-  <router-link to="/signup">Need an account? Sign up</router-link>
+    <p class="mt-6 text-center text-sm text-ink/60">
+      <router-link to="/signup" class="text-accent hover:text-accent-dark">
+        Need an account? Sign up
+      </router-link>
+    </p>
+  </div>
 </template>
 
 <script setup>
