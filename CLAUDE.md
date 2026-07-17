@@ -24,9 +24,28 @@ Recipe Planner is a comprehensive meal planning and recipe management system tha
 - **Phase 2**: Multi-user household/family coordination
 - **Phase 3**: Community-based platform for worldwide recipe sharing and discovery
 
+## Architecture
+
+Rails 8.0 API-only backend (`config.api_only = true`) serving a Vue 3 SPA (`app/frontend/`) built with Vite. `PagesController` (an `ActionController::Base` subclass, not `API`) renders the single SPA shell; `config/routes.rb` catches all non-`/api/` paths and routes them there. Auth is cookie/session-based (not tokens) — see `docs/adr/0001-cookie-session-auth.md`.
+
+All non-obvious architecture decisions, the recipe-import/autosort design, and the unit/bolt task breakdown are tracked under `docs/` (AI-DLC process): `docs/intent/`, `docs/adr/`, `docs/design/`, `docs/units/`, `docs/bolts/`. Check `docs/bolts/*/tasks.md` for what's actually been built vs. still planned before assuming a feature exists.
+
 ## Common Development Commands
 
+**Local stack:** the `web` Docker image has no Node.js — Vite must run on the host, not in the container.
+```
+npx vite                 # run on the Windows host (bin/vite dev won't work — no host-side bundle install)
+docker-compose up        # Rails + Postgres; VITE_RUBY_HOST=host.docker.internal bridges the two
+```
 **Note:** On Windows, use `bin\vite.cmd dev` if `bin/vite dev` doesn't work.
+
+**Running specs — must override `RAILS_ENV` and `DATABASE_URL`, or they silently run against dev:**
+```
+docker-compose exec -e RAILS_ENV=test -e DATABASE_URL=postgres://postgres:postgres@postgres:5432/recipe_planner_test web bundle exec rspec
+```
+`docker-compose.yml` hardcodes `RAILS_ENV=development` and a dev `DATABASE_URL` as container env vars — `rails_helper.rb`'s `ENV["RAILS_ENV"] ||= "test"` never overrides an already-set value, and `DATABASE_URL` overrides `database.yml` regardless of `RAILS_ENV`. Skipping either flag masks real spec failures as CSRF 403s and pollutes the dev database.
+
+**Linting:** `docker-compose exec web bundle exec rubocop`
 
 See [k8s/README.md](k8s/README.md) for Kubernetes deployment instructions including SSL/TLS setup, scaling, and troubleshooting.
 
@@ -105,13 +124,18 @@ See [k8s/README.md](k8s/README.md) for Kubernetes deployment instructions includ
 - **Global Cuisine Explorer**: Browse recipes by country/region
 - **Cooking Challenges**: Community cooking challenges and events
 
-## Data Models (Planned)
+## Data Models
 
-### Core Models
-- **User**: User accounts and authentication
-- **Recipe**: Recipe data (title, description, instructions, etc.)
-- **Ingredient**: Ingredient master list
-- **RecipeIngredient**: Join model linking recipes to ingredients with quantities
+### Implemented
+- **User**: accounts + cookie-session authentication
+- **Recipe**: title, description, instructions
+- **Ingredient**: ingredient master list
+- **RecipeIngredient**: join model linking recipes to ingredients, with `preparation` and optional group membership
+- **RecipeIngredientGroup**: named sub-groups of ingredients (e.g. "Marinade") — see `docs/adr/0003-first-class-ingredient-groups.md`
+- **Instruction**: step-by-step recipe instructions, optionally scoped to a `RecipeIngredientGroup`
+- **InstructionIngredient**: join model linking an instruction step to the specific ingredients it uses (the core of the autosort-matching design in `docs/design/recipe-import-and-autosort.md`)
+
+### Planned
 - **MealPlan**: Scheduled meals on calendar
 - **ShoppingList**: Generated shopping lists
 - **ShoppingListItem**: Individual items on shopping lists
@@ -133,26 +157,18 @@ See [k8s/README.md](k8s/README.md) for Kubernetes deployment instructions includ
 
 ## Development Priorities
 
-### Current Sprint (Phase 1 - MVP)
-1. Complete recipe CRUD functionality
-2. Build meal planning dashboard with calendar
-3. Implement recipe search and filtering
-4. Add user preferences for dietary restrictions and ingredient likes/dislikes
-5. Create shopping list generation from meal plans
-6. Add portion scaling for recipes
-7. Implement basic nutritional information
+### Status
+- **Bolt 001 (foundations) — done**: cookie-session auth (signup/login/logout, CORS, router guard), and the ingredient-grouping schema (migrations, models, serializer). See `docs/bolts/bolt-001-foundations/tasks.md` for the 3 real bugs verification found and fixed.
+- **Bolt 002 (recipe index) — done**: Vue recipe list page (`app/frontend/views/Recipes.vue`) fetching `GET /api/v1/recipes`.
+- **Known bug (tracked, not yet fixed)**: `RecipesController#recipe_params` permits `:name` instead of `:title` and never sets `:user_id`, so recipe create/update against the real schema returns 422 instead of succeeding. Documented as `pending` specs in `spec/requests/recipe_spec.rb`. Blocks Unit 02 Slice B (create/edit/delete recipe forms).
 
-### Next Steps
-1. Polish UI/UX for Phase 1 features
-2. Add comprehensive testing coverage
-3. Deploy to production environment
-4. User testing and feedback collection
+### Next up (per `docs/units/`)
+1. Fix `recipe_params`, then Unit 02 Slice B — recipe create/edit/detail Vue views
+2. Units 04-05 — ingredient-line parser + autosort matching engine (the core differentiator vs. Tandoor, see `docs/design/recipe-import-and-autosort.md`)
+3. Unit 06 — recipe import (JSON-LD first, per `docs/adr/0005-jsonld-first-recipe-import.md`)
+4. Unit 07 — autosort review UI
 
-### Future Enhancements
-1. Mobile-responsive design optimization
-2. Recipe import from URLs (web scraping)
-3. Meal planning AI suggestions based on preferences
-4. Integration with grocery delivery services
-5. Recipe scaling with unit conversions
-6. Multi-user household features (Phase 2)
-7. Community and social features (Phase 3)
+### Future Enhancements (Phase 2/3, not yet scheduled into units)
+1. Meal planning calendar, shopping list generation, portion scaling, nutritional info (Phase 1 remainder)
+2. Multi-user household features (Phase 2)
+3. Community and social features (Phase 3)
