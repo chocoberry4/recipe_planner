@@ -10,4 +10,9 @@ Rails.application.routes.draw do
       delete "logout", to: "auth#logout"
     end
   end
+
+  root "pages#index"
+  # Vue Router uses history mode, so any non-API path must serve the same
+  # SPA shell and let the client-side router take over.
+  get "*path", to: "pages#index", constraints: ->(req) { !req.path.start_with?("/api/") }
 end

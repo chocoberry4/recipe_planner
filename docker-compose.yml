@@ -28,6 +28,9 @@ services:
       - RAILS_ENV=development
       - RAILS_LOG_TO_STDOUT=true
       - SOLID_QUEUE_IN_PUMA=true
+      # The image has no Node.js, so Vite runs on the host (`bin/vite dev`).
+      # Point the dev-server proxy at the host instead of localhost-in-container.
+      - VITE_RUBY_HOST=host.docker.internal
     depends_on:
       postgres:
         condition: service_healthy

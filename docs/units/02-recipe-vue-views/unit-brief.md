@@ -5,6 +5,8 @@
 
 Split into two independently-schedulable slices, since they have different dependencies.
 
+**Done (prerequisite, discovered while wiring up Slice A):** there was no `root` route and no view mounting the Vue app at all — `App.vue`/`main.js`/the router existed but nothing bootstrapped them. Fixed: `root "pages#index"` + a `get "*path"` catch-all (excluding `/api/`) so Vue Router's history mode works on refresh/direct nav; `PagesController < ActionController::Base` (bypassing the API-only `ApplicationController`) with an explicit `layout "application"` (automatic layout lookup did not fire for this controller — root cause not fully identified, explicit declaration is the fix); `app/views/layouts/application.html.erb` with `vite_client_tag`/`vite_javascript_tag`. Also fixed along the way: `main.js` moved to `app/frontend/entrypoints/main.js` (vite_rails convention — it wasn't a recognized entrypoint before), the router moved from a stray `app/frontend/src/router/` to `app/frontend/router/` so its `../views/*.vue` imports actually resolve, and `vue-router` was added to `package.json` (imported but never declared). See project memory for the Docker↔Vite dev-server networking setup this required.
+
 ## Slice A — Recipe Index Page
 
 - **Depends on**: — (none)
