@@ -8,7 +8,7 @@
         <p v-if="recipe.description" class="mt-2 text-ink/60">{{ recipe.description }}</p>
       </div>
 
-      <div v-if="auth.isLoggedIn" class="flex shrink-0 gap-2 text-sm">
+      <div v-if="isOwner" class="flex shrink-0 gap-2 text-sm">
         <router-link
           :to="`/recipes/${recipe.id}/edit`"
           class="rounded-full border border-line px-3.5 py-1.5 text-ink hover:border-accent hover:text-accent transition-colors"
@@ -81,6 +81,7 @@ const auth = useAuthStore()
 const loading = ref(true)
 const error = ref(null)
 const recipe = computed(() => recipes.current)
+const isOwner = computed(() => auth.isLoggedIn && recipe.value?.user_id === auth.user.id)
 
 onMounted(async () => {
   const result = await recipes.fetchOne(route.params.id)

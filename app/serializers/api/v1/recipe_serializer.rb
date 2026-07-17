@@ -8,7 +8,7 @@ module Api
       # Both shapes serialize each recipe_ingredient the same way (via
       # `recipe_ingredient_json`), including `preparation` split out of the
       # ingredient name so later matching logic can key off the clean name.
-      attributes :id, :title, :description, :recipe_ingredient_groups,
+      attributes :id, :title, :description, :user_id, :recipe_ingredient_groups,
                  :ingredients, :instructions, :created_at, :updated_at
 
       def recipe_ingredient_groups

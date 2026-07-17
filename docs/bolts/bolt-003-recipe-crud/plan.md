@@ -19,9 +19,9 @@ Create and edit share a single `RecipeForm.vue` (mode inferred from whether the 
 - Router gains `/recipes/new`, `/recipes/:id`, `/recipes/:id/edit`; the auth guard (previously an exact match on `/recipes`) now generalizes via `meta.requiresAuth` to cover the whole `/recipes` section, consistent with Unit 01's original intent ("router guard redirecting unauthenticated users away from recipe routes").
 - Verified end-to-end in the browser (signup → create → view → edit → delete → list updates) and via a logged-out redirect check, not just code inspection.
 
-## Known follow-up (not in this bolt's scope)
+## Known follow-up — fixed same day (2026-07-17)
 
-`RecipesController#update`/`#destroy` only check `require_login`, not recipe ownership — any logged-in user can currently edit or delete any recipe, not just their own. Pre-existing gap (not introduced here), but now user-reachable via the UI for the first time. Worth a small follow-up (`before_action :require_owner`) before this ships beyond local dev.
+`RecipesController#update`/`#destroy` only checked `require_login`, not recipe ownership — any logged-in user could edit or delete any recipe, not just their own. Fixed with a `before_action :require_owner` (403 if `@recipe.user_id != current_user.id`). `RecipeSerializer` now exposes `user_id` so `RecipeDetail.vue` can hide Edit/Delete for recipes the current user doesn't own, instead of showing controls that would 403 on click. Covered by two new request specs (non-owner update/destroy → 403) and verified live with two separate accounts, including a direct `fetch` bypassing the UI.
 
 ## Out of scope
 

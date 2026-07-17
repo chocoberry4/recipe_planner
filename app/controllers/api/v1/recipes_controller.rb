@@ -5,6 +5,8 @@ module Api
       # a logged-in user since recipes belong to one (see Recipe#user).
       before_action :require_login, only: %i[create update destroy]
       before_action :find_recipe, only: %i[show update destroy]
+      before_action :require_owner, only: %i[update destroy]
+
       def index
         recipes = Recipe.all
         render json: recipes, each_serializer: RecipeSerializer
@@ -50,6 +52,12 @@ module Api
 
       def find_recipe
         @recipe = Recipe.find(params[:id])
+      end
+
+      def require_owner
+        return if @recipe.user_id == current_user.id
+
+        render json: { error: "Not authorized" }, status: :forbidden
       end
     end
   end

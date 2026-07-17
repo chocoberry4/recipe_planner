@@ -96,6 +96,16 @@ RSpec.describe "Recipes", type: :request do
       expect(response).to have_http_status(:ok)
       expect(recipe.reload.title).to eq("New Title")
     end
+
+    it "returns forbidden when a non-owner tries to update the recipe" do
+      recipe = create(:recipe)
+      log_in_as(create(:user))
+
+      patch "/api/v1/recipes/#{recipe.id}", params: { recipe: { title: "Hijacked" } }
+
+      expect(response).to have_http_status(:forbidden)
+      expect(recipe.reload.title).not_to eq("Hijacked")
+    end
   end
 
   describe "DELETE /api/v1/recipes/:id" do
@@ -107,6 +117,16 @@ RSpec.describe "Recipes", type: :request do
 
       expect(response).to have_http_status(:no_content)
       expect(Recipe.exists?(recipe.id)).to be false
+    end
+
+    it "returns forbidden when a non-owner tries to delete the recipe" do
+      recipe = create(:recipe)
+      log_in_as(create(:user))
+
+      delete "/api/v1/recipes/#{recipe.id}"
+
+      expect(response).to have_http_status(:forbidden)
+      expect(Recipe.exists?(recipe.id)).to be true
     end
   end
 end
