@@ -2,6 +2,7 @@ source "https://rubygems.org"
 
 gem "rails", "~> 8.0.3"
 
+gem "active_model_serializers", "~> 0.10.15"
 gem "bcrypt"
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
@@ -27,4 +28,8 @@ group :development, :test do
   gem "rubocop-rails-omakase", require: false
   gem "rspec-rails", "~> 8.0.0"
   gem "pry"
+end
+
+group :development do
+  gem "guard-rspec", require: false
 end

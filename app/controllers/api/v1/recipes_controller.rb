@@ -1,6 +1,6 @@
-module API
+module Api
   module V1
-    class RecipesController < API::ApplicationController
+    class RecipesController < Api::BaseController
       before_action :find_recipe, only: %i[show update destroy]
       def index
         recipes = Recipe.all

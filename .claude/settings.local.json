@@ -7,7 +7,8 @@
       "Bash(docker-compose logs:*)",
       "Bash(bin/rubocop*)",
       "Bash(bundle update:*)",
-      "Bash(bundle exec:*)"
+      "Bash(bundle exec:*)",
+      "Bash(rspec spec/requests/recipe_spec.rb)"
     ],
     "deny": [],
     "ask": []

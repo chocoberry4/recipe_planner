@@ -1,7 +1,7 @@
-module API
+module Api
   module V1
     class RecipeSerializer < ActiveModel::Serializer
-      attributes :id, :name, :description, :ingredients,
+      attributes :id, :title, :description, :ingredients,
                  :instructions, :created_at, :updated_at
     end
   end

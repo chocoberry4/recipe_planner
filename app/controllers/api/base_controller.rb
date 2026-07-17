@@ -1,4 +1,4 @@
-class API::BaseController < ApplicationController
+class Api::BaseController < ApplicationController
   include ActionController::Cookies
   include ActionController::RequestForgeryProtection
 
@@ -31,6 +31,6 @@ class API::BaseController < ApplicationController
   end
 
   def bad_request
-    render json: { error: "Bad Request" }, status: :bad_reques
+    render json: { error: "Bad Request" }, status: :bad_request
   end
 end
