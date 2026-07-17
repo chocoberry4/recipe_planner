@@ -164,10 +164,10 @@ See [k8s/README.md](k8s/README.md) for Kubernetes deployment instructions includ
 - **`recipe_params` bug — fixed**: now permits `:title`/`:description`; owner is set from `current_user` (not a client-supplied `user_id`) in `RecipesController#create`.
 - **Bolt 004 (ingredient-line parser) — done**: `IngredientLineParser` service object (`app/services/ingredient_line_parser.rb`) turns a raw ingredient string into `quantity`/`unit`/`name`/`preparation`. See `docs/bolts/bolt-004-ingredient-line-parser/plan.md`.
 - **Bolt 005 (autosort matching engine) — done**: `RecipeAutosorter` service object (`app/services/recipe_autosorter.rb`) implements the tiered structural/group-prose/fuzzy/unresolved matching algorithm, populating `instruction_ingredients`. See `docs/bolts/bolt-005-autosort-matching-engine/plan.md` for the matching-threshold scope decision.
+- **Bolt 006 (recipe import) — done**: `JsonLdRecipeExtractor` + `RecipeImporter` (`app/services/`), `POST /api/v1/recipes/import` (URL or manual-paste text), both paths running `IngredientLineParser` + `RecipeAutosorter`. Includes an SSRF guard on the URL path and a `RecipeIngredient#quantity` validation fix (now allows `nil`). See `docs/bolts/bolt-006-recipe-import/plan.md`. No frontend import form yet — API/pipeline only.
 
 ### Next up (per `docs/units/`)
-1. Unit 06 — recipe import (JSON-LD first, per `docs/adr/0005-jsonld-first-recipe-import.md`) — will call `IngredientLineParser` + `RecipeAutosorter` on imported data
-2. Unit 07 — autosort review UI (surfaces `RecipeAutosorter`'s Tier 3 unresolved ingredients for manual drag-in, per ADR-0004)
+1. Unit 07 — autosort review UI (frontend: import form for `POST /api/v1/recipes/import`, plus surfacing `RecipeAutosorter`'s Tier 3 unresolved ingredients for manual drag-in, per ADR-0004)
 
 ### Future Enhancements (Phase 2/3, not yet scheduled into units)
 1. Meal planning calendar, shopping list generation, portion scaling, nutritional info (Phase 1 remainder)

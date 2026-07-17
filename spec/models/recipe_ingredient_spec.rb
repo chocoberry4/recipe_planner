@@ -6,6 +6,11 @@ RSpec.describe RecipeIngredient, type: :model do
     expect(recipe_ingredient).not_to be_valid
   end
 
+  it "is valid with a nil quantity (e.g. a 'to taste' ingredient with no amount)" do
+    recipe_ingredient = build(:recipe_ingredient, quantity: nil)
+    expect(recipe_ingredient).to be_valid
+  end
+
   it "optionally belongs to a recipe_ingredient_group" do
     recipe_ingredient = build(:recipe_ingredient, recipe_ingredient_group: nil)
     expect(recipe_ingredient).to be_valid

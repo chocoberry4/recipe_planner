@@ -5,6 +5,8 @@ Rails.application.routes.draw do
       resources :recipes
       resources :ingredients
 
+      post "recipes/import", to: "recipe_imports#create"
+
       post "login", to: "auth#login"
       post "signup", to: "auth#signup"
       delete "logout", to: "auth#logout"
