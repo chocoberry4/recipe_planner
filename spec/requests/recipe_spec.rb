@@ -1,14 +1,120 @@
 require 'rails_helper'
 
 RSpec.describe "Recipes", type: :request do
+  # Recipe mutations (create/update/destroy) require a logged-in user (see
+  # Api::BaseController#require_login), added by the authentication unit
+  # after these specs were first written.
+  def log_in_as(user)
+    post "/api/v1/login", params: { user: { email: user.email, password: "password123" } }
+  end
+
   describe "GET /api/v1/recipes" do
     it "returns a list of recipes" do
       create_list(:recipe, 3)
 
       get "/api/v1/recipes"
-      
+
       expect(response).to have_http_status(:ok)
       expect(JSON.parse(response.body).length).to eq(3)
+    end
+  end
+
+  describe "GET /api/v1/recipes/:id" do
+    it "returns the requested recipe" do
+      recipe = create(:recipe)
+
+      get "/api/v1/recipes/#{recipe.id}"
+
+      expect(response).to have_http_status(:ok)
+      body = JSON.parse(response.body)
+      expect(body["id"]).to eq(recipe.id)
+      expect(body["title"]).to eq(recipe.title)
+      expect(body["description"]).to eq(recipe.description)
+    end
+
+    it "serializes grouped and ungrouped ingredients with their preparation" do
+      recipe = create(:recipe)
+      group = create(:recipe_ingredient_group, recipe: recipe, name: "Marinade")
+      grouped_ingredient = create(:recipe_ingredient, recipe: recipe, recipe_ingredient_group: group, preparation: "minced")
+      ungrouped_ingredient = create(:recipe_ingredient, recipe: recipe)
+
+      get "/api/v1/recipes/#{recipe.id}"
+
+      body = JSON.parse(response.body)
+      expect(body["recipe_ingredient_groups"].length).to eq(1)
+      expect(body["recipe_ingredient_groups"].first["name"]).to eq("Marinade")
+      expect(body["recipe_ingredient_groups"].first["recipe_ingredients"].first["id"]).to eq(grouped_ingredient.id)
+      expect(body["recipe_ingredient_groups"].first["recipe_ingredients"].first["preparation"]).to eq("minced")
+      expect(body["ingredients"].map { |i| i["id"] }).to contain_exactly(ungrouped_ingredient.id)
+    end
+
+    it "returns not_found for a missing recipe" do
+      get "/api/v1/recipes/999999"
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
+  describe "POST /api/v1/recipes" do
+    it "returns unprocessable_entity when required fields are missing" do
+      log_in_as(create(:user))
+
+      post "/api/v1/recipes", params: { recipe: { title: "", description: "" } }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    # KNOWN BUG (out of scope for this unit, tracked separately):
+    # RecipesController#recipe_params permits :name instead of :title, and
+    # never permits/sets :user_id. Since Recipe requires both a title and a
+    # user, creation against the correct schema currently fails validation
+    # and returns 422 instead of 201. This spec documents the intended,
+    # correct behavior and is marked pending until recipe_params is fixed.
+    it "creates a new recipe", pending: "recipe_params permits :name instead of :title and never sets user_id" do
+      user = create(:user)
+      log_in_as(user)
+
+      post "/api/v1/recipes", params: { recipe: { title: "Tacos", description: "Weeknight tacos", user_id: user.id } }
+
+      expect(response).to have_http_status(:created)
+      body = JSON.parse(response.body)
+      expect(body["title"]).to eq("Tacos")
+    end
+  end
+
+  describe "PATCH /api/v1/recipes/:id" do
+    it "returns unprocessable_entity when the update is invalid" do
+      recipe = create(:recipe)
+      log_in_as(recipe.user)
+
+      patch "/api/v1/recipes/#{recipe.id}", params: { recipe: { description: "" } }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    # KNOWN BUG (out of scope for this unit, tracked separately): see note
+    # above on the POST spec. recipe_params permits :name instead of :title,
+    # so title updates are silently dropped rather than applied.
+    it "updates the recipe", pending: "recipe_params permits :name instead of :title, so title updates are dropped" do
+      recipe = create(:recipe)
+      log_in_as(recipe.user)
+
+      patch "/api/v1/recipes/#{recipe.id}", params: { recipe: { title: "New Title" } }
+
+      expect(response).to have_http_status(:ok)
+      expect(recipe.reload.title).to eq("New Title")
+    end
+  end
+
+  describe "DELETE /api/v1/recipes/:id" do
+    it "deletes the recipe" do
+      recipe = create(:recipe)
+      log_in_as(recipe.user)
+
+      delete "/api/v1/recipes/#{recipe.id}"
+
+      expect(response).to have_http_status(:no_content)
+      expect(Recipe.exists?(recipe.id)).to be false
     end
   end
 end
