@@ -37,9 +37,12 @@ One real bug caught during this verification and fixed: the first import attempt
 
 The per-step "add ingredient" control was a native `<select>` — one click-through per ingredient, and its default browser dropdown arrow didn't match the rest of the page's styling. Replaced with `app/frontend/components/IngredientCombobox.vue`, a small custom component (no new dependency): a text input that filters the option list as you type, plus a custom SVG chevron button. Selecting an option keeps the list open rather than closing it, so several ingredients can be added to the same step in a row before moving on — arrow keys + Enter also work. Verified live via Playwright: typing filters correctly, click-to-add stays open for a second pick, keyboard nav (down/Enter) selects, and the control disables cleanly with a "Nothing left to add" placeholder once a step's options run out.
 
+## Follow-up (2026-07-18): manual-entry path added to RecipeForm.vue
+
+Closes the "manual-entry path" gap noted below. `RecipeForm.vue`'s create mode now has a "+ Paste ingredients" toggle (reveals a one-per-line textarea) and an always-visible one-step-per-line instructions textarea, submitting through the existing `RecipeImporter.from_text` pipeline (`recipes.importFromText`) rather than a new parsing path — same `IngredientLineParser` + `RecipeAutosorter` the paste-text import mode already uses. Redirects to `/recipes/:id/review` when ingredients/instructions were provided, straight to the recipe page otherwise. Edit mode is untouched (title/description only). Also added `x` to `IngredientLineParser::KNOWN_UNITS` so count-style lines ("1 x chicken breast") parse quantity/unit/name correctly instead of leaking "x" into the name.
+
 ## Out of scope
 
 - The matching logic itself (Unit 05) — this unit only renders and edits its output, per the unit brief
 - Native drag-and-drop gestures (see scope decision above)
 - Ingredient/instruction editing beyond assignment (adding a whole new ingredient or step isn't part of this review flow)
-- A manual-entry path for instructions/ingredients on non-imported recipes (`RecipeForm.vue` still only handles title/description) — the review UI is reachable only for recipes with instructions, i.e. imported ones
