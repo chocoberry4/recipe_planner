@@ -4,25 +4,44 @@
   <div v-else-if="recipe">
     <div>
       <h1 class="font-display text-3xl font-semibold text-ink">{{ recipe.title }}</h1>
+      <p v-if="recipe.description" class="mt-2 text-ink/60">{{ recipe.description }}</p>
       <p class="mt-1 text-sm text-ink/50">
         Review the ingredients autosort assigned to each step, then fix anything that's wrong.
       </p>
     </div>
 
-    <section class="mt-8 space-y-5">
+    <section
+      v-if="recipe.recipe_ingredient_groups.length || recipe.ingredients.length"
+      class="mt-8 border-t border-line pt-6"
+    >
+      <h2 class="font-display text-lg font-semibold text-sage">Ingredients</h2>
+
+      <div v-for="group in recipe.recipe_ingredient_groups" :key="group.id" class="mt-4">
+        <h3 class="text-sm font-semibold text-ink/70">{{ group.name }}</h3>
+        <ul class="mt-2 space-y-1.5 text-ink/85">
+          <li v-for="ri in group.recipe_ingredients" :key="ri.id" class="flex gap-2">
+            <span class="text-accent">&bull;</span>
+            <span>{{ ri.quantity }} {{ ri.unit }} {{ ri.name }}<span v-if="ri.preparation">, {{ ri.preparation }}</span></span>
+          </li>
+        </ul>
+      </div>
+
+      <ul v-if="recipe.ingredients.length" class="mt-4 space-y-1.5 text-ink/85">
+        <li v-for="ri in recipe.ingredients" :key="ri.id" class="flex gap-2">
+          <span class="text-accent">&bull;</span>
+          <span>{{ ri.quantity }} {{ ri.unit }} {{ ri.name }}<span v-if="ri.preparation">, {{ ri.preparation }}</span></span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="mt-8 space-y-5 border-t border-line pt-6">
+      <h2 class="font-display text-lg font-semibold text-sage">Steps</h2>
       <div
         v-for="instruction in recipe.instructions"
         :key="instruction.id"
         class="rounded-xl border border-line bg-white p-4"
       >
-        <div class="flex gap-3">
-          <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-dark">
-            {{ instruction.step_number }}
-          </span>
-          <p class="text-ink/85">{{ instruction.description }}</p>
-        </div>
-
-        <ul class="mt-3 ml-9 flex flex-wrap gap-2">
+        <ul class="flex flex-wrap gap-2">
           <li
             v-for="ri in assignedFor(instruction.id)"
             :key="ri.id"
@@ -42,6 +61,13 @@
             No ingredients assigned.
           </li>
         </ul>
+
+        <div class="mt-3 flex gap-3">
+          <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-dark">
+            {{ instruction.step_number }}
+          </span>
+          <p class="text-ink/85">{{ instruction.description }}</p>
+        </div>
 
         <IngredientCombobox
           :options="unresolvedOptions"
