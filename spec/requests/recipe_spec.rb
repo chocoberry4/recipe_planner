@@ -121,6 +121,38 @@ RSpec.describe "Recipes", type: :request do
       expect(response).to have_http_status(:forbidden)
       expect(recipe.reload.title).not_to eq("Hijacked")
     end
+
+    it "accepts nested ingredient/instruction edits, additions, and removals" do
+      recipe = create(:recipe)
+      log_in_as(recipe.user)
+      group = create(:recipe_ingredient_group, recipe: recipe, name: "Marinade")
+      keep = create(:recipe_ingredient, recipe: recipe, recipe_ingredient_group: group, ingredient: create(:ingredient, name: "soy sauce"))
+      remove = create(:recipe_ingredient, recipe: recipe)
+      step = create(:instruction, recipe: recipe, description: "Old step")
+
+      patch "/api/v1/recipes/#{recipe.id}", params: {
+        recipe: {
+          recipe_ingredient_groups: [
+            { id: group.id, name: "Marinade",
+              recipe_ingredients: [ { id: keep.id, name: "soy sauce", quantity: 3, unit: "tbsp" } ] }
+          ],
+          ingredients: [
+            { id: remove.id, _destroy: true },
+            { name: "garlic", quantity: 1, unit: "clove", preparation: "minced" }
+          ],
+          instructions: [
+            { id: step.id, description: "New step", step_number: 1 }
+          ]
+        }
+      }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      body = JSON.parse(response.body)
+      expect(keep.reload.quantity).to eq(3)
+      expect(RecipeIngredient.exists?(remove.id)).to be false
+      expect(step.reload.description).to eq("New step")
+      expect(body["ingredients"].map { |i| i["name"] }).to include("garlic")
+    end
   end
 
   describe "DELETE /api/v1/recipes/:id" do

@@ -17,7 +17,7 @@ module Api
       end
 
       def create
-        recipe = current_user.recipes.build(recipe_params)
+        recipe = current_user.recipes.build(create_params)
         if recipe.save
           render json: recipe, status: :created, serializer: RecipeSerializer
         else
@@ -26,10 +26,11 @@ module Api
       end
 
       def update
-        if @recipe.update(recipe_params)
-          render json: @recipe, status: :ok, serializer: RecipeSerializer
+        result = RecipeUpdater.call(@recipe, update_params)
+        if result.ok?
+          render json: result.recipe, status: :ok, serializer: RecipeSerializer
         else
-          render json: { errors: @recipe.errors.full_messages }, status: :unprocessable_entity
+          render json: { errors: result.errors }, status: :unprocessable_entity
         end
       end
 
@@ -43,11 +44,28 @@ module Api
 
       private
 
-      def recipe_params
-        # Owner is set from current_user (see #create), not a client-supplied
-        # param. Nested ingredients/instructions have no accepts_nested_attributes_for
-        # setup yet, so they aren't accepted here — that's Unit 02 Slice B / import.
+      def create_params
+        # Owner is set from current_user, not a client-supplied param. No
+        # nested ingredients/instructions here - a freshly-built recipe has no
+        # associations to attach them to yet (see RecipeImporter for the
+        # from-scratch creation path, which does support them).
         params.require(:recipe).permit(:title, :description)
+      end
+
+      def update_params
+        # Nested writes go through RecipeUpdater rather than
+        # accepts_nested_attributes_for, since renaming an ingredient needs to
+        # re-resolve it via Ingredient.find_or_create_by (see RecipeUpdater),
+        # not mutate the shared Ingredient row in place.
+        params.require(:recipe).permit(
+          :title, :description,
+          recipe_ingredient_groups: [
+            :id, :name, :position, :_destroy,
+            recipe_ingredients: [ :id, :name, :quantity, :unit, :preparation, :position, :_destroy ]
+          ],
+          ingredients: [ :id, :name, :quantity, :unit, :preparation, :position, :_destroy ],
+          instructions: [ :id, :description, :step_number, :recipe_ingredient_group_id, :_destroy ]
+        )
       end
 
       def find_recipe
