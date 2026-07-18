@@ -7,7 +7,6 @@ module Api
     class InstructionIngredientsController < Api::BaseController
       before_action :require_login
       before_action :find_recipe
-      before_action :require_owner
 
       def update
         instruction_ids = @recipe.instructions.pluck(:id)
@@ -27,14 +26,10 @@ module Api
 
       private
 
+      # A recipe id belonging to someone else 404s rather than 403s - same
+      # not-visible-to-you treatment as RecipesController (see its comment).
       def find_recipe
-        @recipe = Recipe.find(params[:recipe_id])
-      end
-
-      def require_owner
-        return if @recipe.user_id == current_user.id
-
-        render json: { error: "Not authorized" }, status: :forbidden
+        @recipe = current_user.recipes.find(params[:recipe_id])
       end
 
       # Only instruction_ids/recipe_ingredient_ids that actually belong to this

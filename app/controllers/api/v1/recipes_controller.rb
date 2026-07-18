@@ -1,15 +1,17 @@
 module Api
   module V1
     class RecipesController < Api::BaseController
-      # Recipe browsing (index/show) stays public; mutating a recipe requires
-      # a logged-in user since recipes belong to one (see Recipe#user).
-      before_action :require_login, only: %i[create update destroy]
+      # Recipes are private to their owner - no public/shared visibility yet
+      # (a future "public" recipe setting is planned but out of scope for
+      # now), so every action here requires login and is scoped to
+      # current_user.recipes. A recipe id that exists but belongs to someone
+      # else 404s the same as one that doesn't exist at all, rather than
+      # revealing its existence via a 403.
+      before_action :require_login
       before_action :find_recipe, only: %i[show update destroy]
-      before_action :require_owner, only: %i[update destroy]
 
       def index
-        recipes = Recipe.all
-        render json: recipes, each_serializer: RecipeSummarySerializer
+        render json: current_user.recipes, each_serializer: RecipeSummarySerializer
       end
 
       def show
@@ -69,17 +71,11 @@ module Api
       end
 
       def find_recipe
-        @recipe = Recipe.includes(RecipeSerializer::EAGER_LOAD).find(params[:id])
+        @recipe = current_user.recipes.includes(RecipeSerializer::EAGER_LOAD).find(params[:id])
       end
 
       def reload_for_serialization(recipe)
-        Recipe.includes(RecipeSerializer::EAGER_LOAD).find(recipe.id)
-      end
-
-      def require_owner
-        return if @recipe.user_id == current_user.id
-
-        render json: { error: "Not authorized" }, status: :forbidden
+        current_user.recipes.includes(RecipeSerializer::EAGER_LOAD).find(recipe.id)
       end
     end
   end

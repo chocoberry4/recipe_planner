@@ -14,13 +14,13 @@ RSpec.describe "InstructionIngredients", type: :request do
       expect(response).to have_http_status(:unauthorized)
     end
 
-    it "returns forbidden for a non-owner" do
+    it "returns not_found for a non-owner" do
       recipe = create(:recipe)
       log_in_as(create(:user))
 
       patch "/api/v1/recipes/#{recipe.id}/instruction_ingredients", params: { assignments: {} }
 
-      expect(response).to have_http_status(:forbidden)
+      expect(response).to have_http_status(:not_found)
     end
 
     it "replaces the instruction_ingredients set to match the submitted assignments" do

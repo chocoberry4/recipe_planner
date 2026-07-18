@@ -1,27 +1,45 @@
 require 'rails_helper'
 
 RSpec.describe "Recipes", type: :request do
-  # Recipe mutations (create/update/destroy) require a logged-in user (see
-  # Api::BaseController#require_login), added by the authentication unit
-  # after these specs were first written.
+  # Recipes are private to their owner (see RecipesController) - every
+  # action needs a logged-in user, scoped to that user's own recipes.
   def log_in_as(user)
     post "/api/v1/login", params: { user: { email: user.email, password: "password123" } }
   end
 
   describe "GET /api/v1/recipes" do
-    it "returns a list of recipes" do
-      create_list(:recipe, 3)
+    it "requires a logged-in user" do
+      get "/api/v1/recipes"
 
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "returns only the logged-in user's own recipes" do
+      user = create(:user)
+      own_recipes = create_list(:recipe, 2, user: user)
+      create_list(:recipe, 3) # someone else's
+
+      log_in_as(user)
       get "/api/v1/recipes"
 
       expect(response).to have_http_status(:ok)
-      expect(JSON.parse(response.body).length).to eq(3)
+      body = JSON.parse(response.body)
+      expect(body.map { |r| r["id"] }).to contain_exactly(*own_recipes.map(&:id))
     end
   end
 
   describe "GET /api/v1/recipes/:id" do
+    it "requires a logged-in user" do
+      recipe = create(:recipe)
+
+      get "/api/v1/recipes/#{recipe.id}"
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
     it "returns the requested recipe" do
       recipe = create(:recipe)
+      log_in_as(recipe.user)
 
       get "/api/v1/recipes/#{recipe.id}"
 
@@ -34,6 +52,7 @@ RSpec.describe "Recipes", type: :request do
 
     it "serializes grouped and ungrouped ingredients with their preparation" do
       recipe = create(:recipe)
+      log_in_as(recipe.user)
       group = create(:recipe_ingredient_group, recipe: recipe, name: "Marinade")
       grouped_ingredient = create(:recipe_ingredient, recipe: recipe, recipe_ingredient_group: group, preparation: "minced")
       ungrouped_ingredient = create(:recipe_ingredient, recipe: recipe)
@@ -50,6 +69,7 @@ RSpec.describe "Recipes", type: :request do
 
     it "serializes each instruction's assigned recipe_ingredient_ids" do
       recipe = create(:recipe)
+      log_in_as(recipe.user)
       salt_ri = create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "salt"))
       unresolved_ri = create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "pepper"))
       step = create(:instruction, recipe: recipe)
@@ -64,7 +84,18 @@ RSpec.describe "Recipes", type: :request do
     end
 
     it "returns not_found for a missing recipe" do
+      log_in_as(create(:user))
+
       get "/api/v1/recipes/999999"
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "returns not_found (not the recipe) for another user's recipe" do
+      recipe = create(:recipe)
+      log_in_as(create(:user))
+
+      get "/api/v1/recipes/#{recipe.id}"
 
       expect(response).to have_http_status(:not_found)
     end
@@ -112,13 +143,13 @@ RSpec.describe "Recipes", type: :request do
       expect(recipe.reload.title).to eq("New Title")
     end
 
-    it "returns forbidden when a non-owner tries to update the recipe" do
+    it "returns not_found when a non-owner tries to update the recipe" do
       recipe = create(:recipe)
       log_in_as(create(:user))
 
       patch "/api/v1/recipes/#{recipe.id}", params: { recipe: { title: "Hijacked" } }
 
-      expect(response).to have_http_status(:forbidden)
+      expect(response).to have_http_status(:not_found)
       expect(recipe.reload.title).not_to eq("Hijacked")
     end
 
@@ -166,13 +197,13 @@ RSpec.describe "Recipes", type: :request do
       expect(Recipe.exists?(recipe.id)).to be false
     end
 
-    it "returns forbidden when a non-owner tries to delete the recipe" do
+    it "returns not_found when a non-owner tries to delete the recipe" do
       recipe = create(:recipe)
       log_in_as(create(:user))
 
       delete "/api/v1/recipes/#{recipe.id}"
 
-      expect(response).to have_http_status(:forbidden)
+      expect(response).to have_http_status(:not_found)
       expect(Recipe.exists?(recipe.id)).to be true
     end
   end
