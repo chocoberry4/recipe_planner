@@ -53,6 +53,9 @@ When an ingredient has multiple unassigned occurrences (the duplicate-measuremen
 - If the step text restates a quantity ("melt 2 tbsp of the butter"), prefer the occurrence whose `quantity`/`unit` matches, as a tiebreaker.
 - Otherwise, fall back to list order (first unassigned occurrence) — still an improvement over Tandoor's plain first-occurrence rule, since already-assigned occurrences are excluded from consideration.
 
+**Tier 2.5 — Implied collective group (added in Unit 08).**
+For recipes where grouping exists nowhere in the source data at all — not even a `HowToSection` — but a step's prose refers to a section collectively ("the Marinade ingredients"), detect that reference and, *only* when there's exactly one such label and exactly one contiguous run (by list `position`, length ≥ 2) of still-unassigned ingredients, create a real `RecipeIngredientGroup` for it and assign the whole run to whichever step most directly names the section (preferring a leading `"Label:"` prefix over an earlier passing mention). With more than one label or more than one run, there's no reliable signal to pair them, so this tier bails out entirely rather than guess — see Bolt 008's plan for the case this doesn't cover.
+
 **Tier 3 — Unresolved.**
 Anything left over is not force-assigned. It surfaces in the UI as unplaced, for manual drag-in (ADR-0004). Silence beats a wrong guess.
 
@@ -78,6 +81,6 @@ One parser, used by both paths. Handles numeric and unicode fractions, a known-u
 
 ## Known limitations
 
-- Ingredient-side section headers ("For the marinade:") are rendered in HTML, not JSON-LD, for most sites. JSON-LD import will often produce ungrouped ingredients even for recipes that are visually sectioned — the user groups them manually after import in that case. This is a real gap, not a bug to "fix" — there is no standard structured-data field for it.
+- Ingredient-side section headers ("For the marinade:") are rendered in HTML, not JSON-LD, for most sites. JSON-LD import will often produce ungrouped ingredients even for recipes that are visually sectioned. **Partially mitigated by Tier 2.5 (Unit 08)**: when exactly one section is referenced collectively in prose and exactly one contiguous unassigned run of ingredients exists, it's grouped and assigned automatically. Recipes with *multiple* ungrouped sections (e.g. both an ungrouped "Filling" and "Topping") still fall through to fully manual grouping — pairing multiple labels to multiple runs isn't reliably derivable from position alone, so Tier 2.5 deliberately declines to guess there.
 - No synonym/alias handling in this design (e.g. "scallion" vs "green onion", "cilantro" vs "coriander"). Tier 2 matching is normalization + stemming only. An ingredient alias table is a plausible future addition, out of scope here.
 - The ingredient-line parser is heuristic; malformed or unusually-phrased ingredient lines may parse into the wrong fields. Since the result lands in editable fields (not committed silently), this is an acceptable failure mode.

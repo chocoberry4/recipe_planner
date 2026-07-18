@@ -107,6 +107,36 @@ RSpec.describe IngredientLineParser do
     expect(result.preparation).to eq("finely chopped")
   end
 
+  it "strips a trailing parenthetical note not preceded by a comma" do
+    result = parse("1 cup tomato passata (aka tomato puree)")
+
+    expect(result.name).to eq("tomato passata")
+    expect(result.preparation).to eq("aka tomato puree")
+  end
+
+  it "strips a doubled/nested parenthetical footnote marker" do
+    result = parse("1 cup heavy cream ((Note 5))")
+
+    expect(result.name).to eq("heavy cream")
+    expect(result.preparation).to eq("Note 5")
+  end
+
+  it "strips a parenthetical aside sitting between the unit and the name" do
+    result = parse("2 tbsp (30 g) ghee or butter")
+
+    expect(result.quantity).to eq(2.0)
+    expect(result.unit).to eq("tbsp")
+    expect(result.name).to eq("ghee or butter")
+    expect(result.preparation).to eq("30 g")
+  end
+
+  it "combines a parenthetical aside with an existing comma preparation note" do
+    result = parse("1 cup onion (yellow), finely chopped")
+
+    expect(result.name).to eq("onion")
+    expect(result.preparation).to eq("finely chopped; yellow")
+  end
+
   it "returns all-nil fields for a blank line" do
     result = parse("   ")
 

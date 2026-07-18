@@ -7,6 +7,12 @@
 class RecipeAutosorter
   MEASUREMENT_PATTERN = /(\d+\/\d+|\d+(?:\.\d+)?)\s*(#{IngredientLineParser::KNOWN_UNITS.sort_by { |u| -u.length }.join('|')})\b/i
 
+  # Matches "the Marinade" mid-sentence — a lowercase article followed by a
+  # Capitalized word is how recipe prose refers to a named section when the
+  # source data never encoded that grouping anywhere structured. Deliberately
+  # excludes sentence-initial capitals (ordinary capitalization).
+  COLLECTIVE_LABEL_PATTERN = /\bthe\s+([A-Z][a-z]+)\b/
+
   def self.call(recipe)
     new(recipe).call
   end
@@ -22,6 +28,7 @@ class RecipeAutosorter
     assign_tier0_structural
     assign_tier1_group_prose
     assign_tier2_individual_fuzzy
+    assign_tier2_5_implied_collective_group
     self
   end
 
@@ -82,6 +89,85 @@ class RecipeAutosorter
         assign(instruction, pick_occurrence(occurrences, measurement))
       end
     end
+  end
+
+  # Tier 2.5: implied collective group. Covers recipes whose source data never
+  # groups ingredients anywhere at all (common: a site visually sections its
+  # ingredients but a schema.org recipeIngredient array has no way to encode
+  # that) — see docs/design/recipe-import-and-autosort.md "Known limitations".
+  # Deliberately scoped to the single-group case only: fires *only* when
+  # exactly one collective label is named in prose AND exactly one contiguous
+  # run (length >= 2) of still-unassigned ingredients exists. Multiple
+  # sections in one recipe can't be reliably paired up by this heuristic
+  # (which label goes with which run), so that case is left fully unresolved
+  # for manual grouping rather than guessed — silence beats a wrong guess.
+  def assign_tier2_5_implied_collective_group
+    labels = detect_collective_labels
+    runs = contiguous_unassigned_runs
+    return unless labels.size == 1 && runs.size == 1
+
+    label = labels.first
+    run = runs.first
+
+    group = @recipe.recipe_ingredient_groups.create!(
+      name: label,
+      position: @recipe.recipe_ingredient_groups.count + 1
+    )
+    run.each { |ri| ri.update!(recipe_ingredient_group: group) }
+
+    target = primary_instruction_for(label) || first_referencing_instruction(label)
+    run.each { |ri| assign(target, ri) } if target
+  end
+
+  def detect_collective_labels
+    known_tokens = @recipe_ingredients.flat_map { |ri| normalize_tokens(ri.ingredient.name) }.to_set
+
+    labels = []
+    @instructions.each do |instruction|
+      collective_labels_in(instruction.description).each do |label|
+        next if known_tokens.include?(label.downcase.singularize)
+
+        labels << label unless labels.include?(label)
+      end
+    end
+    labels
+  end
+
+  def collective_labels_in(text)
+    normalized = text.to_s.gsub(/[ \s]+/, " ")
+    normalized.scan(COLLECTIVE_LABEL_PATTERN).flatten.uniq
+  end
+
+  # A step whose text literally starts with "Label:" (e.g. "Marinade: Combine
+  # the Marinade ingredients...") is the section's actual step, as distinct
+  # from an earlier step that merely mentions the label in passing (e.g. an
+  # "optional" alternate technique). Prefer that over first-mention order.
+  def primary_instruction_for(label)
+    @instructions.find { |i| i.description.to_s.strip.start_with?("#{label}:") }
+  end
+
+  def first_referencing_instruction(label)
+    @instructions.find { |i| collective_labels_in(i.description).include?(label) }
+  end
+
+  # Maximal runs of still-unassigned ingredients that are contiguous in the
+  # recipe's original list order. A lone leftover ingredient isn't a
+  # "section" (min length 2) — that's ordinary Tier 3 unresolved.
+  def contiguous_unassigned_runs(min_length: 2)
+    ordered = @recipe_ingredients.sort_by { |ri| [ ri.position || Float::INFINITY, ri.id ] }
+
+    runs = []
+    current = []
+    ordered.each do |ri|
+      if @assigned_ids.include?(ri.id)
+        runs << current if current.size >= min_length
+        current = []
+      else
+        current << ri
+      end
+    end
+    runs << current if current.size >= min_length
+    runs
   end
 
   def candidate_ingredient_ids(tokens)

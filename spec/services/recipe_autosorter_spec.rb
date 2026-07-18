@@ -72,6 +72,73 @@ RSpec.describe RecipeAutosorter do
     end
   end
 
+  describe "Tier 2.5: implied collective group" do
+    it "groups an unnamed contiguous run and assigns it to the step that most directly names it" do
+      recipe = create(:recipe)
+      yoghurt = create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "yoghurt"), position: 1)
+      turmeric = create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "turmeric"), position: 2)
+      garlic = create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "garlic"), position: 3)
+      salt = create(:ingredient, name: "salt")
+      create(:recipe_ingredient, recipe: recipe, ingredient: salt, position: 4)
+      passing_mention = create(:instruction, recipe: recipe, step_number: 1,
+        description: "Optional: blitz the Marinade ingredients in a food processor first.")
+      primary_step = create(:instruction, recipe: recipe, step_number: 2,
+        description: "Marinade: Combine the Marinade ingredients with the chicken and refrigerate.")
+      salt_step = create(:instruction, recipe: recipe, step_number: 3, description: "Season with salt to taste.")
+
+      described_class.call(recipe)
+
+      expect(assigned_ingredient_ids(primary_step)).to contain_exactly(yoghurt.id, turmeric.id, garlic.id)
+      expect(assigned_ingredient_ids(passing_mention)).to be_empty
+      expect(assigned_ingredient_ids(salt_step)).to contain_exactly(RecipeIngredient.find_by(ingredient: salt).id)
+      expect(recipe.recipe_ingredient_groups.pluck(:name)).to eq([ "Marinade" ])
+    end
+
+    it "does not treat a real ingredient name as a collective label" do
+      recipe = create(:recipe)
+      chicken = create(:ingredient, name: "chicken")
+      create(:recipe_ingredient, recipe: recipe, ingredient: chicken, position: 1)
+      onion = create(:ingredient, name: "onion")
+      create(:recipe_ingredient, recipe: recipe, ingredient: onion, position: 2)
+      instruction = create(:instruction, recipe: recipe,
+        description: "Fry the Chicken until golden, then set aside.")
+
+      described_class.call(recipe)
+
+      expect(recipe.recipe_ingredient_groups).to be_empty
+      expect(assigned_ingredient_ids(instruction)).to contain_exactly(RecipeIngredient.find_by(ingredient: chicken).id)
+    end
+
+    it "bails out when more than one contiguous unassigned run exists" do
+      recipe = create(:recipe)
+      create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "yoghurt"), position: 1)
+      create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "turmeric"), position: 2)
+      create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "sugar"), position: 3)
+      create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "garlic"), position: 4)
+      create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "ginger"), position: 5)
+      create(:instruction, recipe: recipe, step_number: 1,
+        description: "Marinade: Combine the Marinade ingredients together.")
+      create(:instruction, recipe: recipe, step_number: 2, description: "Stir in the sugar.")
+
+      described_class.call(recipe)
+
+      expect(recipe.recipe_ingredient_groups).to be_empty
+      expect(InstructionIngredient.count).to eq(1) # only "sugar", via Tier 2 — the two runs either side of it stay unresolved
+    end
+
+    it "does not treat a single leftover ingredient as a collective section" do
+      recipe = create(:recipe)
+      create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "cream"), position: 1)
+      create(:instruction, recipe: recipe,
+        description: "Stir in the Filling until smooth.")
+
+      described_class.call(recipe)
+
+      expect(recipe.recipe_ingredient_groups).to be_empty
+      expect(InstructionIngredient.count).to eq(0)
+    end
+  end
+
   describe "Tier 3: unresolved" do
     it "leaves an ingredient unmentioned in any step unassigned rather than guessing" do
       recipe = create(:recipe)

@@ -51,12 +51,41 @@ class IngredientLineParser
 
     quantity, remainder = extract_quantity(@line)
     unit, remainder = extract_unit(remainder)
+    remainder, asides = extract_parentheticals(remainder)
     name, preparation = split_name_and_preparation(remainder)
+    preparation = merge_preparation(preparation, asides)
 
     Result.new(quantity: quantity, unit: unit, name: name, preparation: preparation)
   end
 
   private
+
+  # Strips parenthetical asides ("(30 g)", "(aka tomato puree)", "((Note 4))")
+  # out of the name entirely, folding their text into preparation instead.
+  # Left in place, this junk (metric-conversion asides, footnote markers) ends
+  # up as literal tokens in RecipeIngredient's name, which permanently blocks
+  # RecipeAutosorter's Tier 2 exact-token-containment match — a step can say
+  # "ghee" verbatim and still never match an ingredient whose name is
+  # "(30 g) ghee or butter", since "30"/"g" tokens never appear in prose.
+  def extract_parentheticals(text)
+    cleaned = text.dup
+    asides = []
+
+    while cleaned.match?(/\(([^()]*)\)/)
+      cleaned = cleaned.gsub(/\s*\(([^()]*)\)\s*/) do
+        content = Regexp.last_match(1).to_s.strip.sub(/\A,\s*/, "")
+        asides << content if content.present?
+        " "
+      end
+    end
+
+    [ cleaned.squeeze(" ").strip, asides ]
+  end
+
+  def merge_preparation(preparation, asides)
+    combined = [ preparation, *asides ].compact_blank
+    combined.empty? ? nil : combined.join("; ")
+  end
 
   def extract_quantity(text)
     if (m = text.match(/\A(\d+)?\s*([#{FRACTION_CHARS}])\s+(.*)\z/))
