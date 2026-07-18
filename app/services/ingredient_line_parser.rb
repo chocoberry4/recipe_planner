@@ -36,6 +36,7 @@ class IngredientLineParser
     bunch bunches
     head heads
     sprig sprigs
+    x
   ].freeze
 
   def self.parse(line)

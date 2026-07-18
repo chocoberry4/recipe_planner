@@ -63,6 +63,14 @@ RSpec.describe IngredientLineParser do
     expect(result.name).to eq("eggs")
   end
 
+  it "treats a bare 'x' count marker as the unit" do
+    result = parse("1 x onion")
+
+    expect(result.quantity).to eq(1.0)
+    expect(result.unit).to eq("x")
+    expect(result.name).to eq("onion")
+  end
+
   it "does not mistake a non-unit descriptor for a unit" do
     result = parse("3 large eggs")
 

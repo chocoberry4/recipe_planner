@@ -28,6 +28,37 @@
         ></textarea>
       </label>
 
+      <template v-if="!isEdit">
+        <button
+          v-if="!showIngredients"
+          type="button"
+          class="rounded-full border border-line px-4 py-2 text-sm font-medium text-ink hover:border-accent hover:text-accent transition-colors cursor-pointer"
+          @click="showIngredients = true"
+        >
+          + Paste ingredients
+        </button>
+
+        <label v-else class="block">
+          <span class="text-sm font-medium text-ink/80">Ingredients (one per line)</span>
+          <textarea
+            v-model="ingredientsText"
+            rows="6"
+            placeholder="1 onion&#10;1 x chicken breast&#10;1 tbsp salt"
+            class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 font-mono text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+          ></textarea>
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium text-ink/80">Instructions (one step per line)</span>
+          <textarea
+            v-model="instructionsText"
+            rows="6"
+            placeholder="Whisk the eggs.&#10;Add the flour and stir."
+            class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+          ></textarea>
+        </label>
+      </template>
+
       <button
         type="submit"
         :disabled="submitting"
@@ -52,6 +83,9 @@ const isEdit = computed(() => !!route.params.id)
 
 const title = ref('')
 const description = ref('')
+const showIngredients = ref(false)
+const ingredientsText = ref('')
+const instructionsText = ref('')
 const error = ref(null)
 const submitting = ref(false)
 
@@ -71,17 +105,34 @@ async function handleSubmit() {
   submitting.value = true
   error.value = null
 
-  const data = { title: title.value, description: description.value }
-  const result = isEdit.value
-    ? await recipes.update(route.params.id, data)
-    : await recipes.create(data)
+  if (isEdit.value) {
+    const result = await recipes.update(route.params.id, { title: title.value, description: description.value })
+    submitting.value = false
+
+    if (result.ok) {
+      router.push(`/recipes/${result.recipe.id}`)
+    } else {
+      error.value = result.errors.join(', ')
+    }
+    return
+  }
+
+  const result = await recipes.importFromText({
+    title: title.value,
+    description: description.value,
+    ingredients_text: ingredientsText.value,
+    instructions_text: instructionsText.value,
+  })
 
   submitting.value = false
 
   if (result.ok) {
-    router.push(`/recipes/${result.recipe.id}`)
+    const destination = result.recipe.instructions.length
+      ? `/recipes/${result.recipe.id}/review`
+      : `/recipes/${result.recipe.id}`
+    router.push(destination)
   } else {
-    error.value = result.errors.join(', ')
+    error.value = result.error || 'Failed to create recipe.'
   }
 }
 </script>
