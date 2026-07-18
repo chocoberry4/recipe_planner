@@ -68,7 +68,7 @@
             {{ step.step_number }}
           </span>
           <div>
-            <p v-if="stepIngredients(step).length" class="italic text-sm text-ink/60">
+            <p v-if="stepIngredients(step).length" class="text-sm text-ink/60">
               {{ stepIngredients(step).map(ingredientLabel).join(', ') }}
             </p>
             <span class="text-ink/85">{{ step.description }}</span>
