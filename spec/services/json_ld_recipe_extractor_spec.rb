@@ -106,6 +106,37 @@ RSpec.describe JsonLdRecipeExtractor do
     expect(result.instructions.map(&:text)).to eq([ "Whisk the eggs.", "Add the flour." ])
   end
 
+  it "decodes raw HTML entities left undecoded in JSON-LD text fields" do
+    html = html_with_json_ld(
+      "@type" => "Recipe",
+      "name" => "Tacos",
+      "description" => "you&#39;ll love these",
+      "recipeIngredient" => [ "2 eggs&nbsp;(large)" ],
+      "recipeInstructions" => [
+        { "@type" => "HowToStep", "text" => "Cook chicken:&nbsp;heat the pan." }
+      ]
+    )
+
+    result = described_class.extract(html)
+
+    expect(result.description).to eq("you'll love these")
+    expect(result.ingredient_lines).to eq([ "2 eggs (large)" ])
+    expect(result.instructions.map(&:text)).to eq([ "Cook chicken: heat the pan." ])
+  end
+
+  it "squishes whitespace left behind after decoding entities" do
+    html = html_with_json_ld(
+      "@type" => "Recipe",
+      "name" => "Tacos",
+      "recipeIngredient" => [],
+      "recipeInstructions" => [ "  Whisk&nbsp;&nbsp;the eggs.  " ]
+    )
+
+    result = described_class.extract(html)
+
+    expect(result.instructions.map(&:text)).to eq([ "Whisk the eggs." ])
+  end
+
   it "returns nil when no Recipe node is present" do
     html = html_with_json_ld("@type" => "WebPage", "name" => "Homepage")
 

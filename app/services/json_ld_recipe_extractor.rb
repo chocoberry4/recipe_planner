@@ -19,14 +19,24 @@ class JsonLdRecipeExtractor
     return nil unless node
 
     Result.new(
-      title: node["name"],
-      description: node["description"],
-      ingredient_lines: Array(node["recipeIngredient"]).map(&:to_s),
+      title: clean_text(node["name"]),
+      description: clean_text(node["description"]),
+      ingredient_lines: Array(node["recipeIngredient"]).map { |line| clean_text(line) },
       instructions: extract_instructions(node["recipeInstructions"])
     )
   end
 
   private
+
+  # Some sites' JSON-LD embeds raw, undecoded HTML entities in what's meant to
+  # be plain text (e.g. RecipeTinEats' recipeInstructions contains literal
+  # "&nbsp;" and "&#39;" strings, not real whitespace/apostrophe characters).
+  # Nokogiri::HTML.fragment decodes named + numeric entities in one pass;
+  # the resulting non-breaking spaces are then flattened to regular spaces
+  # and runs of whitespace collapsed.
+  def clean_text(text)
+    Nokogiri::HTML.fragment(text.to_s).text.gsub(" ", " ").squish
+  end
 
   def recipe_node
     Nokogiri::HTML(@html).css('script[type="application/ld+json"]').each do |script|
@@ -53,7 +63,7 @@ class JsonLdRecipeExtractor
   def extract_instructions(raw)
     case raw
     when String
-      raw.split(/\r?\n/).map(&:strip).reject(&:empty?).map { |text| InstructionEntry.new(text: text, group_name: nil) }
+      raw.split(/\r?\n/).map { |text| clean_text(text) }.reject(&:empty?).map { |text| InstructionEntry.new(text: text, group_name: nil) }
     when Array
       raw.flat_map { |item| extract_instruction_item(item) }
     else
@@ -64,7 +74,7 @@ class JsonLdRecipeExtractor
   def extract_instruction_item(item)
     case item
     when String
-      [ InstructionEntry.new(text: item, group_name: nil) ]
+      [ InstructionEntry.new(text: clean_text(item), group_name: nil) ]
     when Hash
       item["@type"] == "HowToSection" ? extract_section(item) : extract_step(item)
     else
@@ -74,13 +84,13 @@ class JsonLdRecipeExtractor
 
   def extract_section(section)
     Array(section["itemListElement"]).filter_map do |step|
-      text = step.is_a?(Hash) ? step["text"] : step
-      InstructionEntry.new(text: text, group_name: section["name"]) if text.present?
+      text = clean_text(step.is_a?(Hash) ? step["text"] : step)
+      InstructionEntry.new(text: text, group_name: clean_text(section["name"]).presence) if text.present?
     end
   end
 
   def extract_step(step)
-    text = step["text"]
+    text = clean_text(step["text"])
     text.present? ? [ InstructionEntry.new(text: text, group_name: nil) ] : []
   end
 end
