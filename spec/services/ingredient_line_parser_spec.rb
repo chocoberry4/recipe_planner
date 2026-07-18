@@ -96,6 +96,24 @@ RSpec.describe IngredientLineParser do
     expect(result.name).to eq("pizza")
   end
 
+  it "strips a bare inline metric/imperial conversion glued onto the name" do
+    result = parse("1 x 340g/12oz can evaporated milk")
+
+    expect(result.quantity).to eq(1.0)
+    expect(result.unit).to eq("x")
+    expect(result.name).to eq("can evaporated milk")
+    expect(result.preparation).to eq("340g/12oz")
+  end
+
+  it "recognizes a unit with a trailing plus sign" do
+    result = parse("1/2 tsp+ cinnamon powder, for sprinkling")
+
+    expect(result.quantity).to eq(0.5)
+    expect(result.unit).to eq("tsp")
+    expect(result.name).to eq("cinnamon powder")
+    expect(result.preparation).to eq("for sprinkling")
+  end
+
   it "handles a missing quantity and unit" do
     result = parse("Salt to taste")
 

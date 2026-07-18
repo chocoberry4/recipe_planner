@@ -52,14 +52,31 @@ class IngredientLineParser
 
     quantity, remainder = extract_quantity(@line)
     unit, remainder = extract_unit(remainder)
+    remainder, conversion = extract_inline_conversion(remainder)
     remainder, asides = extract_parentheticals(remainder)
     name, preparation = split_name_and_preparation(remainder)
-    preparation = merge_preparation(preparation, asides)
+    preparation = merge_preparation(preparation, [ conversion, *asides ].compact)
 
     Result.new(quantity: quantity, unit: unit, name: name, preparation: preparation)
   end
 
   private
+
+  # Strips a bare (non-parenthetical) metric/imperial conversion glued
+  # directly onto the name ("340g/12oz can evaporated milk", "200g/7oz
+  # chicken mince") - some sites write this inline instead of in parens.
+  # Same rationale as extract_parentheticals: left in place, "340g"/"12oz"
+  # become permanent tokens in the name that a step's prose never restates,
+  # blocking RecipeAutosorter's Tier 2 match even when the real ingredient
+  # ("evaporated milk") is otherwise mentioned.
+  INLINE_CONVERSION_PATTERN = %r{\A\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?(?:g|kg|ml|l|oz|lbs?)\s*/\s*\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?(?:g|kg|ml|l|oz|lbs?)\s+}i
+
+  def extract_inline_conversion(text)
+    m = text.match(INLINE_CONVERSION_PATTERN)
+    return [ text, nil ] unless m
+
+    [ text.sub(INLINE_CONVERSION_PATTERN, ""), m[0].strip ]
+  end
 
   # Strips parenthetical asides ("(30 g)", "(aka tomato puree)", "((Note 4))")
   # out of the name entirely, folding their text into preparation instead.
@@ -116,7 +133,11 @@ class IngredientLineParser
     m = text.match(/\A(\S+)(?:\s+(.*))?\z/)
     candidate = m[1]
     rest = m[2] || ""
-    normalized = candidate.downcase.sub(/[.,]\z/, "")
+    # Trailing "+" ("tsp+ cinnamon powder", meaning "1/2 tsp or more") gets
+    # stripped the same as "." or "," - otherwise "tsp+" never matches
+    # KNOWN_UNITS and the whole thing (including the unit word) leaks into
+    # the name instead.
+    normalized = candidate.downcase.sub(/[.,+]\z/, "")
 
     return [ normalized, rest.sub(/\Aof\s+/i, "") ] if KNOWN_UNITS.include?(normalized)
 

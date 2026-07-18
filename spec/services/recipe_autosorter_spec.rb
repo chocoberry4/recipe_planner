@@ -72,6 +72,31 @@ RSpec.describe RecipeAutosorter do
     end
   end
 
+  describe "group backfill from a matched instruction" do
+    it "assigns an individually-matched ingredient's group from its instruction's structural tie" do
+      recipe = create(:recipe)
+      cake_group = create(:recipe_ingredient_group, recipe: recipe, name: "Cake")
+      baking_powder = create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "baking powder"), recipe_ingredient_group: nil)
+      instruction = create(:instruction, recipe: recipe, recipe_ingredient_group: cake_group,
+        description: "Whisk the flour, baking powder and salt in a bowl.")
+
+      described_class.call(recipe)
+
+      expect(assigned_ingredient_ids(instruction)).to contain_exactly(baking_powder.id)
+      expect(baking_powder.reload.recipe_ingredient_group).to eq(cake_group)
+    end
+
+    it "leaves an ingredient ungrouped when its matched instruction has no structural group tie" do
+      recipe = create(:recipe)
+      salt = create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "salt"), recipe_ingredient_group: nil)
+      create(:instruction, recipe: recipe, recipe_ingredient_group: nil, description: "Season with salt to taste.")
+
+      described_class.call(recipe)
+
+      expect(salt.reload.recipe_ingredient_group).to be_nil
+    end
+  end
+
   describe "Tier 2.5: implied collective group" do
     it "groups an unnamed contiguous run and assigns it to the step that most directly names it" do
       recipe = create(:recipe)

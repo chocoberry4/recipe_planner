@@ -28,6 +28,7 @@ class RecipeAutosorter
     assign_tier0_structural
     assign_tier1_group_prose
     assign_tier2_individual_fuzzy
+    backfill_groups_from_matched_instructions
     assign_tier2_5_implied_collective_group
     self
   end
@@ -87,6 +88,26 @@ class RecipeAutosorter
         next if occurrences.empty?
 
         assign(instruction, pick_occurrence(occurrences, measurement))
+      end
+    end
+  end
+
+  # Not a matching tier - a certainty, not a guess. If Tier 1/2 matched an
+  # ingredient to a specific instruction, and that instruction already has a
+  # structural group tie (Tier 0's HowToSection data) that the ingredient
+  # itself never got (common: a site's JSON-LD groups instructions by
+  # section but leaves recipeIngredient a single flat list with no section
+  # info at all), the ingredient's group is already a known fact, not
+  # something to infer - so backfill it rather than leaving the ingredient
+  # correctly assigned to a step but shown as "ungrouped".
+  def backfill_groups_from_matched_instructions
+    @instructions.each do |instruction|
+      next unless instruction.recipe_ingredient_group_id
+
+      instruction.recipe_ingredients.each do |ri|
+        next if ri.recipe_ingredient_group_id
+
+        ri.update!(recipe_ingredient_group: instruction.recipe_ingredient_group)
       end
     end
   end
