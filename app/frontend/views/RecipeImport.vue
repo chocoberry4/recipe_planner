@@ -1,6 +1,6 @@
 <template>
   <div class="max-w-xl mx-auto">
-    <h1 class="font-display text-2xl font-semibold text-ink">Import a recipe</h1>
+    <h1 class="font-display text-2xl font-semibold text-ink">Add a recipe</h1>
 
     <div class="mt-6 flex gap-1 rounded-full bg-line/40 p-1 text-sm font-medium">
       <button
@@ -70,22 +70,20 @@
       </label>
 
       <label class="block">
-        <span class="text-sm font-medium text-ink/80">Ingredients (one per line)</span>
+        <span class="text-sm font-medium text-ink/80">Ingredients (one per line, optional)</span>
         <textarea
           v-model="ingredientsText"
           rows="6"
-          required
           placeholder="1 1/2 cups all-purpose flour, sifted&#10;2 eggs&#10;salt to taste"
           class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 font-mono text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
         ></textarea>
       </label>
 
       <label class="block">
-        <span class="text-sm font-medium text-ink/80">Instructions (one step per line)</span>
+        <span class="text-sm font-medium text-ink/80">Instructions (one step per line, optional)</span>
         <textarea
           v-model="instructionsText"
           rows="6"
-          required
           placeholder="Whisk the eggs.&#10;Add the flour and stir."
           class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
         ></textarea>
@@ -96,7 +94,7 @@
         :disabled="submitting"
         class="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
-        {{ submitting ? 'Importing...' : 'Import' }}
+        {{ submitting ? 'Creating...' : 'Create' }}
       </button>
     </form>
   </div>
@@ -152,7 +150,10 @@ async function handleTextSubmit() {
 
   submitting.value = false
   if (result.ok) {
-    router.push(`/recipes/${result.recipe.id}/review`)
+    const destination = result.recipe.instructions.length
+      ? `/recipes/${result.recipe.id}/review`
+      : `/recipes/${result.recipe.id}`
+    router.push(destination)
   } else {
     error.value = 'Import failed.'
   }
