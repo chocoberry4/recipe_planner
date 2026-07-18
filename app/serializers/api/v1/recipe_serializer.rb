@@ -8,40 +8,55 @@ module Api
       # Both shapes serialize each recipe_ingredient the same way (via
       # `recipe_ingredient_json`), including `preparation` split out of the
       # ingredient name so later matching logic can key off the clean name.
+      # EAGER_LOAD is what every method below needs preloaded to stay
+      # N+1-free - pass it to `includes` wherever a Recipe is fetched for
+      # this serializer. That alone isn't sufficient though: every accessor
+      # here must read the preloaded association arrays in memory (sort_by/
+      # select/map) rather than calling .where/.order/.pluck *on* an
+      # association, since those always issue a fresh query and silently
+      # ignore whatever `includes` already loaded.
+      EAGER_LOAD = { recipe_ingredient_groups: {}, recipe_ingredients: :ingredient, instructions: :instruction_ingredients }.freeze
+
       attributes :id, :title, :description, :user_id, :recipe_ingredient_groups,
                  :ingredients, :instructions, :created_at, :updated_at
 
       def recipe_ingredient_groups
-        object.recipe_ingredient_groups.order(:position).map do |group|
+        object.recipe_ingredient_groups.sort_by(&:position).map do |group|
           {
             id: group.id,
             name: group.name,
             position: group.position,
-            recipe_ingredients: group.recipe_ingredients.order(:position).map { |ri| recipe_ingredient_json(ri) }
+            recipe_ingredients: (ingredients_by_group[group.id] || []).sort_by(&:position).map { |ri| recipe_ingredient_json(ri) }
           }
         end
       end
 
       def ingredients
-        object.recipe_ingredients.where(recipe_ingredient_group_id: nil).order(:position).map do |ri|
-          recipe_ingredient_json(ri)
-        end
+        (ingredients_by_group[nil] || []).sort_by(&:position).map { |ri| recipe_ingredient_json(ri) }
       end
 
       def instructions
-        object.instructions.order(:step_number).map do |instruction|
+        object.instructions.sort_by(&:step_number).map do |instruction|
           {
             id: instruction.id,
             step_number: instruction.step_number,
             description: instruction.description,
             duration_minutes: instruction.duration_minutes,
             recipe_ingredient_group_id: instruction.recipe_ingredient_group_id,
-            recipe_ingredient_ids: instruction.instruction_ingredients.order(:id).pluck(:recipe_ingredient_id)
+            recipe_ingredient_ids: instruction.instruction_ingredients.sort_by(&:id).map(&:recipe_ingredient_id)
           }
         end
       end
 
       private
+
+      # Grouping object.recipe_ingredients (a single preloaded array) once
+      # and keying by recipe_ingredient_group_id (nil for ungrouped) avoids
+      # a second association traversal through recipe_ingredient_groups -
+      # that would double-load every grouped ingredient's row.
+      def ingredients_by_group
+        @ingredients_by_group ||= object.recipe_ingredients.group_by(&:recipe_ingredient_group_id)
+      end
 
       def recipe_ingredient_json(recipe_ingredient)
         {

@@ -9,7 +9,7 @@ module Api
 
       def index
         recipes = Recipe.all
-        render json: recipes, each_serializer: RecipeSerializer
+        render json: recipes, each_serializer: RecipeSummarySerializer
       end
 
       def show
@@ -28,7 +28,7 @@ module Api
       def update
         result = RecipeUpdater.call(@recipe, update_params)
         if result.ok?
-          render json: result.recipe, status: :ok, serializer: RecipeSerializer
+          render json: reload_for_serialization(result.recipe), status: :ok, serializer: RecipeSerializer
         else
           render json: { errors: result.errors }, status: :unprocessable_entity
         end
@@ -69,7 +69,11 @@ module Api
       end
 
       def find_recipe
-        @recipe = Recipe.find(params[:id])
+        @recipe = Recipe.includes(RecipeSerializer::EAGER_LOAD).find(params[:id])
+      end
+
+      def reload_for_serialization(recipe)
+        Recipe.includes(RecipeSerializer::EAGER_LOAD).find(recipe.id)
       end
 
       def require_owner

@@ -7,7 +7,8 @@ module Api
         result = import_params[:url].present? ? import_from_url : import_from_text
 
         if result.ok?
-          render json: result.recipe, status: :created, serializer: RecipeSerializer
+          recipe = Recipe.includes(RecipeSerializer::EAGER_LOAD).find(result.recipe.id)
+          render json: recipe, status: :created, serializer: RecipeSerializer
         else
           render json: { error: result.reason }, status: :unprocessable_entity
         end

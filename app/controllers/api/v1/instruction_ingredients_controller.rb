@@ -22,7 +22,7 @@ module Api
           end
         end
 
-        render json: @recipe.reload, serializer: RecipeSerializer
+        render json: Recipe.includes(RecipeSerializer::EAGER_LOAD).find(@recipe.id), serializer: RecipeSerializer
       end
 
       private
