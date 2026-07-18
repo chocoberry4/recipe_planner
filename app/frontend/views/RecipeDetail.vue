@@ -63,11 +63,16 @@
     <section v-if="recipe.instructions.length" class="mt-8 border-t border-line pt-6">
       <h2 class="font-display text-lg font-semibold text-sage">Instructions</h2>
       <ol class="mt-4 space-y-3">
-        <li v-for="step in recipe.instructions" :key="step.id" class="flex gap-3">
+        <li v-for="step in recipe.instructions" :key="step.id" class="flex items-start gap-3">
           <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-dark">
             {{ step.step_number }}
           </span>
-          <span class="text-ink/85">{{ step.description }}</span>
+          <div>
+            <p v-if="stepIngredients(step).length" class="italic text-sm text-ink/60">
+              {{ stepIngredients(step).map(ingredientLabel).join(', ') }}
+            </p>
+            <span class="text-ink/85">{{ step.description }}</span>
+          </div>
         </li>
       </ol>
     </section>
@@ -89,6 +94,22 @@ const loading = ref(true)
 const error = ref(null)
 const recipe = computed(() => recipes.current)
 const isOwner = computed(() => auth.isLoggedIn && recipe.value?.user_id === auth.user.id)
+
+const allIngredients = computed(() => {
+  if (!recipe.value) return []
+  const grouped = recipe.value.recipe_ingredient_groups.flatMap((g) => g.recipe_ingredients)
+  return [ ...recipe.value.ingredients, ...grouped ]
+})
+
+const ingredientsById = computed(() => new Map(allIngredients.value.map((ri) => [ ri.id, ri ])))
+
+function stepIngredients(step) {
+  return step.recipe_ingredient_ids.map((id) => ingredientsById.value.get(id)).filter(Boolean)
+}
+
+function ingredientLabel(ri) {
+  return [ ri.quantity, ri.unit, ri.name ].filter(Boolean).join(' ')
+}
 
 onMounted(async () => {
   const result = await recipes.fetchOne(route.params.id)
