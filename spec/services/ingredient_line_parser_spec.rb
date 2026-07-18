@@ -79,6 +79,23 @@ RSpec.describe IngredientLineParser do
     expect(result.name).to eq("large eggs")
   end
 
+  it "recognizes a unit that follows the noun instead of preceding it" do
+    result = parse("1 garlic clove, minced")
+
+    expect(result.quantity).to eq(1.0)
+    expect(result.unit).to eq("clove")
+    expect(result.name).to eq("garlic")
+    expect(result.preparation).to eq("minced")
+  end
+
+  it "recognizes a noun-then-unit line with no preparation note" do
+    result = parse("2 pizza slices")
+
+    expect(result.quantity).to eq(2.0)
+    expect(result.unit).to eq("slices")
+    expect(result.name).to eq("pizza")
+  end
+
   it "handles a missing quantity and unit" do
     result = parse("Salt to taste")
 

@@ -118,9 +118,30 @@ class IngredientLineParser
     rest = m[2] || ""
     normalized = candidate.downcase.sub(/[.,]\z/, "")
 
-    return [ nil, text ] unless KNOWN_UNITS.include?(normalized)
+    return [ normalized, rest.sub(/\Aof\s+/i, "") ] if KNOWN_UNITS.include?(normalized)
 
-    [ normalized, rest.sub(/\Aof\s+/i, "") ]
+    reversed_unit, reversed_rest = extract_reversed_unit(candidate, rest)
+    return [ reversed_unit, reversed_rest ] if reversed_unit
+
+    [ nil, text ]
+  end
+
+  # Handles units that naturally follow the noun they count ("1 garlic
+  # clove", "2 pizza slices") instead of preceding it ("2 cups flour"). Only
+  # fires when the *second* word is a known unit and the first isn't, so
+  # ordinary unit-first phrasing above always takes precedence. Without this,
+  # "clove" never gets recognized as a unit here, and "garlic clove" stays
+  # baked into the ingredient name as two tokens instead of one - which then
+  # blocks RecipeAutosorter's matching, since an instruction saying just
+  # "garlic" no longer contains every token of the name.
+  def extract_reversed_unit(noun, rest)
+    return [ nil, nil ] if rest.empty?
+
+    m = rest.match(/\A(\S+?)([.,]?)(?:\s+(.*))?\z/)
+    candidate, punct, remainder = m[1], m[2], (m[3] || "")
+    return [ nil, nil ] unless KNOWN_UNITS.include?(candidate.downcase)
+
+    [ candidate.downcase, [ "#{noun}#{punct}", remainder ].reject(&:blank?).join(" ") ]
   end
 
   def split_name_and_preparation(text)

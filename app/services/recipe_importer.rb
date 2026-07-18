@@ -64,10 +64,29 @@ class RecipeImporter
     )
   end
 
+  # Checkbox glyphs some recipe sites/plugins prepend to each ingredient when
+  # their "printer-friendly"/checklist view gets copy-pasted (e.g. "▢1 garlic
+  # clove, minced"), plus generic bullet characters from pasted markdown/word-
+  # processor lists. Stripped with no required whitespace after, since sites
+  # often glue the glyph directly onto the first character.
+  LIST_MARKER_CHARS = %w[▢ □ ☐ ☑ ☒ ✓ ✔ ✗ ✘ • ◦ ‣ ▪ ▫ ● ○ ■ * – —].freeze
+  LIST_MARKER_PATTERN = /\A[#{Regexp.escape(LIST_MARKER_CHARS.join)}-]+\s*/
+
   def self.split_lines(text)
-    text.to_s.split(/\r?\n/).map(&:strip).reject(&:empty?)
+    text.to_s.split(/\r?\n/).map { |line| strip_list_artifacts(line) }.reject(&:empty?)
   end
   private_class_method :split_lines
+
+  # Strips leading numbered-list markers ("1.", "2)") and bullet/checkbox
+  # glyphs left over from pasting a formatted list (Word/Google Docs/recipe
+  # plugin output) into the plain-text paste form.
+  def self.strip_list_artifacts(line)
+    cleaned = line.strip
+    cleaned = cleaned.sub(/\A\d+[.)]\s+/, "")
+    cleaned = cleaned.sub(LIST_MARKER_PATTERN, "")
+    cleaned.strip
+  end
+  private_class_method :strip_list_artifacts
 
   def self.usable?(extracted)
     extracted && (extracted.ingredient_lines.present? || extracted.instructions.present?)
@@ -105,7 +124,11 @@ class RecipeImporter
 
   def self.create_ingredients(recipe, lines)
     lines.each_with_index do |line, index|
-      parsed = IngredientLineParser.parse(line)
+      # Applied here (not just in split_lines) so URL imports get the same
+      # cleanup as manual paste - some sites' JSON-LD recipeIngredient text
+      # embeds the same checkbox/bullet glyphs as their rendered checklist
+      # view (e.g. RecipeTinEats' "▢1 garlic clove"), not only copy-pasted text.
+      parsed = IngredientLineParser.parse(strip_list_artifacts(line))
       next if parsed.name.blank?
 
       ingredient = Ingredient.find_or_create_by!(name: parsed.name)

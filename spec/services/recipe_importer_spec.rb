@@ -51,6 +51,25 @@ RSpec.describe RecipeImporter do
       expect(egg_step.recipe_ingredients.map { |ri| ri.ingredient.name }).to include("eggs")
     end
 
+    it "strips checkbox glyphs baked directly into a site's JSON-LD recipeIngredient text" do
+      user = create(:user)
+      html = html_with_json_ld(
+        "@type" => "Recipe",
+        "name" => "Noodles",
+        "description" => "Weeknight noodles",
+        "recipeIngredient" => [ "▢1 garlic clove, minced" ],
+        "recipeInstructions" => [ { "@type" => "HowToStep", "text" => "Add garlic." } ]
+      )
+      allow(described_class).to receive(:fetch_html).and_return(html)
+
+      result = described_class.from_url("https://example.com/noodles", user: user)
+
+      expect(result).to be_ok
+      ri = result.recipe.recipe_ingredients.sole
+      expect(ri.ingredient.name).to eq("garlic")
+      expect(ri.unit).to eq("clove")
+    end
+
     it "returns a no_structured_data failure and persists nothing when the page has no JSON-LD" do
       user = create(:user)
       allow(described_class).to receive(:fetch_html).and_return("<html><body>no data here</body></html>")
@@ -108,6 +127,29 @@ RSpec.describe RecipeImporter do
       )
 
       expect(result.recipe.description).to eq("No description provided.")
+    end
+
+    it "strips checkbox glyphs, bullets, and numbered-list markers pasted from formatted lists" do
+      user = create(:user)
+
+      result = described_class.from_text(
+        title: "Tacos",
+        description: "Weeknight tacos",
+        ingredients_text: "▢1 garlic clove, minced\n☑ 2 eggs\n— 1.5 cups flour\n* salt to taste",
+        instructions_text: "1. Preheat the oven.\n2) Add the flour and stir.",
+        user: user
+      )
+
+      expect(result).to be_ok
+      recipe = result.recipe
+      expect(recipe.recipe_ingredients.map { |ri| [ ri.quantity, ri.unit, ri.ingredient.name ] })
+        .to contain_exactly(
+          [ 1.0, "clove", "garlic" ],
+          [ 2.0, nil, "eggs" ],
+          [ 1.5, "cups", "flour" ],
+          [ nil, nil, "salt to taste" ]
+        )
+      expect(recipe.instructions.pluck(:description)).to eq([ "Preheat the oven.", "Add the flour and stir." ])
     end
   end
 end
