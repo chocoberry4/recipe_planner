@@ -33,6 +33,10 @@ Manually verified end-to-end in the browser (Playwright), since this is the proj
 
 One real bug caught during this verification and fixed: the first import attempt 500'd with `NameError: uninitialized constant Api::V1::RecipeImportsController::RecipeImporter` — not a code defect (specs for the same code passed), but the long-running dev Puma container not picking up newly-created files via its file watcher over the Windows Docker bind mount. `docker-compose restart web` resolved it; noted in memory as a recurring Windows-dev gotcha for future sessions.
 
+## Follow-up (2026-07-18): typable multi-add combobox
+
+The per-step "add ingredient" control was a native `<select>` — one click-through per ingredient, and its default browser dropdown arrow didn't match the rest of the page's styling. Replaced with `app/frontend/components/IngredientCombobox.vue`, a small custom component (no new dependency): a text input that filters the option list as you type, plus a custom SVG chevron button. Selecting an option keeps the list open rather than closing it, so several ingredients can be added to the same step in a row before moving on — arrow keys + Enter also work. Verified live via Playwright: typing filters correctly, click-to-add stays open for a second pick, keyboard nav (down/Enter) selects, and the control disables cleanly with a "Nothing left to add" placeholder once a step's options run out.
+
 ## Out of scope
 
 - The matching logic itself (Unit 05) — this unit only renders and edits its output, per the unit brief

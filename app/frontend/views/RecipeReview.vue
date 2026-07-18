@@ -43,16 +43,11 @@
           </li>
         </ul>
 
-        <select
-          class="mt-3 ml-9 rounded-full border border-line bg-white px-3 py-1 text-sm text-ink/70 outline-none focus:border-accent"
+        <IngredientCombobox
+          :options="unresolvedOptions"
           :aria-label="`Add ingredient to step ${instruction.step_number}`"
-          @change="onAddSelect(instruction.id, $event)"
-        >
-          <option value="">+ Add ingredient&hellip;</option>
-          <option v-for="ri in unresolved" :key="ri.id" :value="ri.id">
-            {{ ingredientLabel(ri) }}
-          </option>
-        </select>
+          @select="(id) => addToStep(instruction.id, id)"
+        />
       </div>
     </section>
 
@@ -99,6 +94,7 @@
 import { reactive, computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipesStore } from '../stores/recipes'
+import IngredientCombobox from '../components/IngredientCombobox.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -139,6 +135,8 @@ const assignedIds = computed(() => new Set(Object.values(assignments).flat()))
 
 const unresolved = computed(() => allIngredients.value.filter((ri) => !assignedIds.value.has(ri.id)))
 
+const unresolvedOptions = computed(() => unresolved.value.map((ri) => ({ id: ri.id, label: ingredientLabel(ri) })))
+
 function assignedFor(instructionId) {
   return (assignments[instructionId] || []).map((id) => ingredientsById.value.get(id)).filter(Boolean)
 }
@@ -156,12 +154,6 @@ function addToStep(instructionId, recipeIngredientId) {
     assignments[key] = assignments[key].filter((existingId) => existingId !== id)
   })
   assignments[instructionId] = [ ...(assignments[instructionId] || []), id ]
-}
-
-function onAddSelect(instructionId, event) {
-  const value = event.target.value
-  if (value) addToStep(instructionId, value)
-  event.target.value = ''
 }
 
 function ingredientLabel(ri) {
