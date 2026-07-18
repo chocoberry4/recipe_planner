@@ -27,6 +27,10 @@ Two new service objects, both backend-only (no frontend import form yet — see 
 - SSRF guard on the URL path (private/loopback/link-local ranges rejected before any request is made).
 - Full suite: 76 examples, 0 failures, 1 unrelated pending. Rubocop and Brakeman clean.
 
+## Follow-up (2026-07-18): decode raw HTML entities in JSON-LD text
+
+Found via real-world testing against RecipeTinEats (see Bolt 008): its `recipeInstructions` and `description` fields contain literal, undecoded entity strings — `"Cook chicken:&nbsp;Heat..."`, `"you&#39;ll find..."` — not real whitespace/apostrophe characters. `CGI.unescapeHTML` wouldn't have caught this (it only handles `amp`/`quot`/`gt`/`lt` plus numeric refs, not named entities like `nbsp`). Added a `clean_text` step to `JsonLdRecipeExtractor` using `Nokogiri::HTML.fragment(text).text`, which decodes the full named+numeric entity set; the resulting non-breaking spaces are flattened to regular spaces and whitespace runs squished. Applied to title, description, ingredient lines, instruction text, and `HowToSection` names.
+
 ## Out of scope
 
 - Per-site scrapers (ADR-0005 decision — JSON-LD only, no maintenance burden of scraper-per-site)
