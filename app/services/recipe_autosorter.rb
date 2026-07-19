@@ -75,7 +75,9 @@ class RecipeAutosorter
 
   # Tier 2: individual fuzzy match on normalized, preparation-stripped names,
   # by whole-token overlap rather than substring (fixes "diced tomatoes" vs
-  # "tomatoes, diced"). Duplicate occurrences of the same ingredient are
+  # "tomatoes, diced"). Tolerates one missing modifier token (see
+  # match_score) so a step that abbreviates "dark soy sauce" down to "soy
+  # sauce" still matches. Duplicate occurrences of the same ingredient are
   # disambiguated by a restated quantity/unit in the step text, falling back
   # to list order.
   def assign_tier2_individual_fuzzy
@@ -191,11 +193,62 @@ class RecipeAutosorter
     runs
   end
 
+  # Qualifying ingredients are grouped by their head token (the last name
+  # token - "sauce" in "dark soy sauce", "powder" in "baking powder"), since
+  # that's the only axis two genuinely different ingredients can collide on
+  # under the loosened match_score below (e.g. "baking powder" and "cinnamon
+  # powder" both end in "powder" - a step naming only "baking powder" makes
+  # "cinnamon powder" register as a spurious partial hit off that same
+  # phrase). A complete match (every token present, not just the head noun)
+  # always wins outright within its group and is never blocked by a rival
+  # partial match - and if more than one ingredient is completely named in
+  # the same step, all of them are assigned (no real ambiguity there, e.g.
+  # "add the baking powder and cinnamon powder"). Only when NO complete
+  # match exists does a partial match need to be the group's unique top
+  # scorer to be assigned; a tie between equally-good partials (e.g. "dark
+  # soy sauce" vs "light soy sauce", step just says "soy sauce") is
+  # genuinely ambiguous prose and resolves to neither, same philosophy as
+  # the rest of this tier. Ingredients with different head tokens never
+  # compete with each other, so a step like "whisk the flour, baking powder
+  # and salt" still assigns all three independently.
   def candidate_ingredient_ids(tokens)
-    unassigned.group_by(&:ingredient_id).filter_map do |ingredient_id, ris|
+    qualifying = unassigned.group_by(&:ingredient_id).filter_map do |ingredient_id, ris|
       name_tokens = normalize_tokens(ris.first.ingredient.name)
-      ingredient_id if name_tokens.present? && name_tokens.all? { |t| tokens.include?(t) }
+      next if name_tokens.blank?
+
+      score = match_score(name_tokens, tokens)
+      next unless score
+
+      [ ingredient_id, name_tokens.last, score, score == name_tokens.size ]
     end
+
+    qualifying.group_by { |_id, head, _score, _complete| head }.flat_map do |_head, group|
+      complete = group.select { |_id, _head, _score, is_complete| is_complete }
+      next complete.map(&:first) if complete.any?
+
+      top_score = group.map { |_id, _head, score, _complete| score }.max
+      top = group.select { |_id, _head, score, _complete| score == top_score }
+      top.size == 1 ? [ top.first.first ] : []
+    end
+  end
+
+  # An ingredient qualifies only if its head noun (the final normalized
+  # token) is present verbatim in the step - never optional, since that's
+  # what actually distinguishes it from an unrelated ingredient that happens
+  # to share an earlier descriptive word (e.g. "soy sauce" vs "soy milk").
+  # At most one earlier, modifier-style token may be missing - covers steps
+  # that abbreviate away an adjective ("dark soy sauce" -> "the soy sauce")
+  # without opening the match up to arbitrary partial overlap on longer
+  # names. Returns a score (tokens matched) so candidate_ingredient_ids can
+  # prefer the more complete match when two ingredients share a head token.
+  def match_score(name_tokens, tokens)
+    return nil unless tokens.include?(name_tokens.last)
+
+    modifiers = name_tokens[0...-1]
+    missing = modifiers.count { |t| !tokens.include?(t) }
+    return nil if missing > 1
+
+    name_tokens.size - missing
   end
 
   def pick_occurrence(occurrences, measurement)

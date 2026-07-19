@@ -70,6 +70,59 @@ RSpec.describe RecipeAutosorter do
 
       expect(assigned_ingredient_ids(instruction)).to contain_exactly(first_portion.id)
     end
+
+    it "matches when the step drops a modifier word from the ingredient's name" do
+      recipe = create(:recipe)
+      dark_soy = create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "dark soy sauce"))
+      instruction = create(:instruction, recipe: recipe, description: "Stir in the soy sauce and simmer.")
+
+      described_class.call(recipe)
+
+      expect(assigned_ingredient_ids(instruction)).to contain_exactly(dark_soy.id)
+    end
+
+    it "requires the head noun even when a modifier is droppable" do
+      recipe = create(:recipe)
+      create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "soy sauce"))
+      instruction = create(:instruction, recipe: recipe, description: "Pour in a splash of soy milk.")
+
+      described_class.call(recipe)
+
+      expect(assigned_ingredient_ids(instruction)).to be_empty
+    end
+
+    it "does not let a partial match steal a step from a fully-matching ingredient with the same head noun" do
+      recipe = create(:recipe)
+      baking_powder = create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "baking powder"))
+      create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "cinnamon powder"))
+      flour_step = create(:instruction, recipe: recipe, step_number: 1, description: "Whisk the flour and baking powder in a bowl.")
+
+      described_class.call(recipe)
+
+      expect(assigned_ingredient_ids(flour_step)).to contain_exactly(baking_powder.id)
+    end
+
+    it "assigns two ingredients with the same head noun when both are completely named in the same step" do
+      recipe = create(:recipe)
+      baking_powder = create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "baking powder"))
+      cinnamon_powder = create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "cinnamon powder"))
+      instruction = create(:instruction, recipe: recipe, description: "Combine the baking powder and cinnamon powder.")
+
+      described_class.call(recipe)
+
+      expect(assigned_ingredient_ids(instruction)).to contain_exactly(baking_powder.id, cinnamon_powder.id)
+    end
+
+    it "leaves two equally-qualifying ingredients with the same head noun unresolved" do
+      recipe = create(:recipe)
+      create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "dark soy sauce"))
+      create(:recipe_ingredient, recipe: recipe, ingredient: create(:ingredient, name: "light soy sauce"))
+      instruction = create(:instruction, recipe: recipe, description: "Add the soy sauce.")
+
+      described_class.call(recipe)
+
+      expect(assigned_ingredient_ids(instruction)).to be_empty
+    end
   end
 
   describe "group backfill from a matched instruction" do

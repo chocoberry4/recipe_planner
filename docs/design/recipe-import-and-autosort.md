@@ -48,6 +48,8 @@ For steps without structural section data, but where ingredients are grouped, sc
 **Tier 2 — Individual fuzzy match.**
 For remaining ungrouped or unmatched ingredients: normalize both the step text and the ingredient name (lowercase, strip punctuation, singularize/stem, and — critically — strip the `preparation` text so matching is against the clean canonical name, e.g. "garlic" not "garlic, minced"). Match by token overlap, not substring.
 
+*Updated 2026-07-19*: real-world testing (see project memory) found the original all-tokens-required rule left most ingredients unresolved whenever a step abbreviated away a descriptive modifier ("dark soy sauce" → step just says "soy sauce"). The rule is now: the ingredient's **head noun (last normalized token) must always be present** — never optional, since that's what distinguishes it from an unrelated ingredient sharing an earlier word (e.g. "soy sauce" vs. "soy milk") — and **at most one other (modifier) token may be missing**. When two different ingredients both qualify for the same step and share a head noun (e.g. "baking powder" / "cinnamon powder" both ending in "powder"), a complete match always wins outright; among partial matches only, a unique top scorer wins and a tie is left unresolved rather than guessed. See `app/services/recipe_autosorter.rb`'s `match_score`/`candidate_ingredient_ids` for the implementation and reasoning.
+
 When an ingredient has multiple unassigned occurrences (the duplicate-measurement case):
 - Prefer whichever occurrence is still unassigned.
 - If the step text restates a quantity ("melt 2 tbsp of the butter"), prefer the occurrence whose `quantity`/`unit` matches, as a tiebreaker.
