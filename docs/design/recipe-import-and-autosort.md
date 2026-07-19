@@ -74,6 +74,8 @@ preparation: "sifted"
 
 One parser, used by both paths. Handles numeric and unicode fractions, a known-unit list, and splits the remainder on the first comma into name vs. preparation. This is a regex/heuristic parser, not NLP — it does not need to be perfect, since its output feeds into a name field the user can edit, and matching (Tier 2) already tolerates imperfect normalization.
 
+*Added 2026-07-19*: some sites (RecipeTinEats) splice a bare alternate-name synonym directly into the ingredient line with no parentheses — `"plain flour / all-purpose flour"`, `"chicken stock/broth"`. Left alone this becomes a permanent multi-word compound name no step ever fully restates. The parser now keeps the first alternative as the canonical name and folds the second into `preparation` as an `"aka <alternate>"` note — see `extract_alt_name`.
+
 ## Import pipeline (ADR-0005)
 
 1. Fetch URL → look for `<script type="application/ld+json">` with `@type: "Recipe"` (unwrap `@graph` if present).

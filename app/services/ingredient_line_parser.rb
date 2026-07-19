@@ -55,12 +55,37 @@ class IngredientLineParser
     remainder, conversion = extract_inline_conversion(remainder)
     remainder, asides = extract_parentheticals(remainder)
     name, preparation = split_name_and_preparation(remainder)
-    preparation = merge_preparation(preparation, [ conversion, *asides ].compact)
+    name, alt_name = extract_alt_name(name)
+    preparation = merge_preparation(preparation, [ conversion, alt_name, *asides ].compact)
 
     Result.new(quantity: quantity, unit: unit, name: name, preparation: preparation)
   end
 
   private
+
+  # Strips a bare, non-parenthetical alternate-name synonym some sites splice
+  # directly into the name ("plain flour / all-purpose flour", "chicken
+  # stock/broth") - distinct from extract_inline_conversion (always
+  # digit-led, e.g. "340g/12oz") and from a parenthetical synonym aside
+  # (already handled by extract_parentheticals). Left in place, the
+  # alternate becomes permanent extra tokens in the name that a step's
+  # prose - which only ever restates one term or the other, never both -
+  # can never fully match, blocking RecipeAutosorter's Tier 2. Runs on the
+  # already comma-split `name` (not the raw remainder) so a trailing
+  # comma-separated preparation note isn't swallowed into the alternate.
+  # Keeps the first alternative as the canonical name and folds the second
+  # into preparation as an "aka" note, the same treatment already given to
+  # a parenthetical synonym.
+  ALT_NAME_PATTERN = %r{\A(.+?)\s*/\s*(.+)\z}
+
+  def extract_alt_name(name)
+    return [ nil, nil ] if name.nil?
+
+    m = name.match(ALT_NAME_PATTERN)
+    return [ name, nil ] unless m
+
+    [ m[1].strip, "aka #{m[2].strip}" ]
+  end
 
   # Strips a bare (non-parenthetical) metric/imperial conversion glued
   # directly onto the name ("340g/12oz can evaporated milk", "200g/7oz

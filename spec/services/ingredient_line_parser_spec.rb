@@ -105,6 +105,29 @@ RSpec.describe IngredientLineParser do
     expect(result.preparation).to eq("340g/12oz")
   end
 
+  it "keeps the first term of a bare alternate-name synonym as the name, folding the second into preparation" do
+    result = parse("1 1/2 cups plain flour / all-purpose flour")
+
+    expect(result.quantity).to eq(1.5)
+    expect(result.unit).to eq("cups")
+    expect(result.name).to eq("plain flour")
+    expect(result.preparation).to eq("aka all-purpose flour")
+  end
+
+  it "handles an unspaced alternate-name slash" do
+    result = parse("1 1/2 cups chicken stock/broth, low sodium")
+
+    expect(result.name).to eq("chicken stock")
+    expect(result.preparation).to eq("low sodium; aka broth")
+  end
+
+  it "combines an alternate-name synonym with a parenthetical aside" do
+    result = parse("1 cup thickened cream / heavy cream (or regular full-fat cream)")
+
+    expect(result.name).to eq("thickened cream")
+    expect(result.preparation).to eq("aka heavy cream; or regular full-fat cream")
+  end
+
   it "recognizes a unit with a trailing plus sign" do
     result = parse("1/2 tsp+ cinnamon powder, for sprinkling")
 
