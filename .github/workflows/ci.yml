@@ -125,7 +125,4 @@ jobs:
           KAMAL_REGISTRY_PASSWORD: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
           RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
           RECIPE_PLANNER_DATABASE_PASSWORD: ${{ secrets.RECIPE_PLANNER_DATABASE_PASSWORD }}
-        # TEMPORARY: first-ever deploy to a fresh server needs `kamal setup`
-        # (bootstraps Docker, proxy, accessories). Revert to `kamal deploy`
-        # right after this first run succeeds.
-        run: bundle exec kamal setup
+        run: bundle exec kamal deploy
