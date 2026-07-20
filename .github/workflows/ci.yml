@@ -113,7 +113,11 @@ jobs:
           ssh-private-key: ${{ secrets.KAMAL_SSH_PRIVATE_KEY }}
 
       - name: Trust the server's host key
-        run: ssh-keyscan -H "${{ vars.SERVER_HOST }}" >> ~/.ssh/known_hosts
+        # No -H here: it HMAC-hashes hostnames in known_hosts, a format
+        # Net::SSH (used by Kamal/SSHKit) doesn't reliably match against,
+        # which surfaced as a spurious Net::SSH::HostKeyMismatch even though
+        # the scanned key was correct.
+        run: ssh-keyscan "${{ vars.SERVER_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Deploy with Kamal
         env:
