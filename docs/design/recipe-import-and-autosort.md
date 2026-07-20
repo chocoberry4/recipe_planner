@@ -83,6 +83,13 @@ One parser, used by both paths. Handles numeric and unicode fractions, a known-u
 3. If `HowToSection` is present, that becomes Tier 0 data directly — but note ingredient-side grouping is usually *not* present in JSON-LD even then (see limitation below), so Tier 0 may apply to instructions while ingredients still need manual grouping.
 4. If no usable JSON-LD is found, fall back to manual paste of raw ingredient/instruction text, split into lines and run through the same parser + autosort tiers.
 
+## Future extension: browser bookmarklet import
+
+Idea (not yet scheduled into a unit): a "Save to Recipe Planner" bookmarklet — a bookmark whose URL is `javascript:(...)`, so clicking it while viewing any recipe site runs JS in that page's context (the old Yummly-style save button). Two variants, differing in how much they lean on the pipeline above:
+
+- **Thin (preferred first cut)**: bookmarklet is just `location.href = 'https://<app>/recipes/import?url=' + encodeURIComponent(location.href)`. It redirects to the user's own already-authenticated tab with the URL pre-filled; the *existing* `POST /api/v1/recipes/import` URL path (fetch → `JsonLdRecipeExtractor` → parser → autosort, SSRF guard included) does the rest unchanged. No CORS, no new auth path, close to zero new code — `RecipeImport.vue` just needs to read a `?url=` query param and auto-submit.
+- **Fat (fallback for sites the server can't reach)**: bookmarklet reads `<script type="application/ld+json">` straight out of the page's already-rendered DOM (works around bot-blocking/login walls that would reject the server's own fetch) and POSTs the extracted JSON-LD text to a new endpoint instead of a URL. Needs a text-accepting import endpoint and cross-origin credentialed-request handling, since the script executes on the recipe site's origin, not the app's — more work, and only worth it once the thin version's fetch failures are actually observed in practice.
+
 ## Known limitations
 
 - Ingredient-side section headers ("For the marinade:") are rendered in HTML, not JSON-LD, for most sites. JSON-LD import will often produce ungrouped ingredients even for recipes that are visually sectioned. **Partially mitigated by Tier 2.5 (Unit 08)**: when exactly one section is referenced collectively in prose and exactly one contiguous unassigned run of ingredients exists, it's grouped and assigned automatically. Recipes with *multiple* ungrouped sections (e.g. both an ungrouped "Filling" and "Topping") still fall through to fully manual grouping — pairing multiple labels to multiple runs isn't reliably derivable from position alone, so Tier 2.5 deliberately declines to guess there.

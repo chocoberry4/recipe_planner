@@ -26,6 +26,7 @@ production:
     database: recipe_planner_production
     username: recipe_planner
     password: <%= ENV["RECIPE_PLANNER_DATABASE_PASSWORD"] %>
+    host: <%= ENV.fetch("DB_HOST", "localhost") %>
   cache:
     <<: *primary_production
     database: recipe_planner_production_cache

@@ -90,4 +90,38 @@ jobs:
           RAILS_ENV: test
           DATABASE_URL: postgres://postgres:postgres@localhost:5432
           # REDIS_URL: redis://localhost:6379/0
-        run: bin/rails db:test:prepare test
+        run: bin/rails db:test:prepare && bundle exec rspec
+
+  deploy:
+    needs: [brakeman, bundle_audit, lint, test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Load the deploy SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.KAMAL_SSH_PRIVATE_KEY }}
+
+      - name: Trust the server's host key
+        run: ssh-keyscan -H "${{ vars.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy with Kamal
+        env:
+          SERVER_HOST: ${{ vars.SERVER_HOST }}
+          KAMAL_REGISTRY_PASSWORD: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
+          RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+          RECIPE_PLANNER_DATABASE_PASSWORD: ${{ secrets.RECIPE_PLANNER_DATABASE_PASSWORD }}
+        # TEMPORARY: first-ever deploy to a fresh server needs `kamal setup`
+        # (bootstraps Docker, proxy, accessories). Revert to `kamal deploy`
+        # right after this first run succeeds.
+        run: bundle exec kamal setup

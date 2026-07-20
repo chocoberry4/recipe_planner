@@ -28,9 +28,11 @@ ENV RAILS_ENV="production" \
 # Throw-away build stage to reduce size of final image
 FROM base AS build
 
-# Install packages needed to build gems
+# Install packages needed to build gems, plus Node.js to build the Vue/Vite frontend
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config && \
+    apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config ca-certificates gnupg && \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install --no-install-recommends -y nodejs && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Install application gems
@@ -39,8 +41,17 @@ RUN bundle install && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
     bundle exec bootsnap precompile --gemfile
 
+# Install frontend dependencies
+COPY package.json package-lock.json ./
+RUN npm ci
+
 # Copy application code
 COPY . .
+
+# Build the Vue/Vite frontend into public/vite. SECRET_KEY_BASE_DUMMY lets this boot
+# Rails without real credentials, which aren't available at image build time.
+RUN SECRET_KEY_BASE_DUMMY=1 bundle exec rails assets:precompile && \
+    rm -rf node_modules
 
 # Precompile bootsnap code for faster boot times
 RUN bundle exec bootsnap precompile app/ lib/

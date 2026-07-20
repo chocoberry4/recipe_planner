@@ -16,6 +16,7 @@ gem "solid_queue"
 gem "solid_cable"
 # Add HTTP asset caching/compression and X-Sendfile acceleration to Puma [https://github.com/basecamp/thruster/]
 gem "thruster", require: false
+gem "kamal", require: false
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "vite_rails", "~> 3.0"
 

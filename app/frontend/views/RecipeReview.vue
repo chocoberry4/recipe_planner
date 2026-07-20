@@ -97,8 +97,17 @@
       <div
         v-for="(instruction, index) in instructions"
         :key="instruction._key"
-        class="rounded-xl border border-line bg-white p-4"
+        class="relative rounded-xl border border-line bg-white p-4"
       >
+        <button
+          type="button"
+          class="absolute right-[15px] top-2 text-2xl leading-none text-ink/40 hover:text-accent-dark cursor-pointer"
+          aria-label="Remove step"
+          @click="removeInstruction(instruction._key)"
+        >
+          &times;
+        </button>
+
         <ul v-if="instruction.id" class="flex flex-wrap gap-2">
           <li
             v-for="ri in assignedFor(instruction.id)"
@@ -126,7 +135,7 @@
           </span>
           <textarea
             v-model="instruction.description"
-            rows="2"
+            rows="4"
             class="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
           ></textarea>
           <div class="flex shrink-0 flex-col gap-1">
@@ -149,14 +158,6 @@
               &darr;
             </button>
           </div>
-          <button
-            type="button"
-            class="shrink-0 text-sm text-ink/40 hover:text-accent-dark cursor-pointer"
-            aria-label="Remove step"
-            @click="removeInstruction(instruction._key)"
-          >
-            Remove
-          </button>
         </div>
 
         <IngredientCombobox

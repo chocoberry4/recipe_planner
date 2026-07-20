@@ -183,3 +183,4 @@ No unit briefs exist yet for what comes next — pick from "Future Enhancements"
 1. Meal planning calendar, shopping list generation, portion scaling, nutritional info (Phase 1 remainder)
 2. Multi-user household features (Phase 2)
 3. Community and social features (Phase 3)
+4. Browser bookmarklet import ("Save to Recipe Planner" from any recipe site, Yummly-style) — see "Future extension" in `docs/design/recipe-import-and-autosort.md` for the thin-vs-fat approach

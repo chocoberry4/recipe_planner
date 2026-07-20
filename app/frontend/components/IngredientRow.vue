@@ -16,26 +16,48 @@
       aria-label="Unit"
       class="w-20 rounded-lg border border-line bg-white px-2 py-1 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
     />
-    <input
-      v-model="row.name"
-      type="text"
-      placeholder="Ingredient"
-      aria-label="Ingredient name"
-      class="min-w-32 flex-1 rounded-lg border border-line bg-white px-2 py-1 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-    />
-    <input
-      v-model="row.preparation"
-      type="text"
-      placeholder="Preparation (optional)"
-      aria-label="Preparation"
-      class="min-w-32 flex-1 rounded-lg border border-line bg-white px-2 py-1 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-    />
+    <div class="relative min-w-32 flex-1">
+      <input
+        v-model="row.name"
+        type="text"
+        placeholder="Ingredient"
+        aria-label="Ingredient name"
+        class="w-full rounded-lg border border-line bg-white px-2 py-1 pr-6 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+      />
+      <button
+        v-if="row.name"
+        type="button"
+        class="absolute right-1.5 top-1/2 -translate-y-1/2 text-ink/40 hover:text-accent-dark cursor-pointer"
+        aria-label="Clear ingredient name"
+        @click="row.name = ''"
+      >
+        &times;
+      </button>
+    </div>
+    <div class="relative min-w-32 flex-1">
+      <input
+        v-model="row.preparation"
+        type="text"
+        placeholder="Notes (optional)"
+        aria-label="Preparation"
+        class="w-full rounded-lg border border-line bg-white px-2 py-1 pr-6 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+      />
+      <button
+        v-if="row.preparation"
+        type="button"
+        class="absolute right-1.5 top-1/2 -translate-y-1/2 text-ink/40 hover:text-accent-dark cursor-pointer"
+        aria-label="Clear notes"
+        @click="row.preparation = ''"
+      >
+        &times;
+      </button>
+    </div>
     <select
       v-model="row.groupId"
       aria-label="Ingredient group"
-      class="rounded-lg border border-line bg-white px-2 py-1 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+      class="w-32 shrink-0 rounded-lg border border-line bg-white px-2 py-1 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
     >
-      <option :value="null">Ungrouped</option>
+      <option :value="null"></option>
       <option v-for="g in groups" :key="g._key" :value="g._key">{{ g.name || 'Untitled group' }}</option>
     </select>
     <button
