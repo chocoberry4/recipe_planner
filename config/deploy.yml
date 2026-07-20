@@ -119,8 +119,13 @@ accessories:
         # above, just under the env var name the postgres image itself reads
         # on first boot - see .kamal/secrets.
         - POSTGRES_PASSWORD
+    # postgres:18's official image expects a single mount at
+    # /var/lib/postgresql (not .../data like older Postgres versions) for a
+    # fresh volume - mounting at the old path made it detect "data at the
+    # old expected path" and refuse to start. See
+    # https://github.com/docker-library/postgres/pull/1259
     directories:
-      - data:/var/lib/postgresql/data
+      - data:/var/lib/postgresql
 #   redis:
 #     image: redis:7.0
 #     host: 192.168.0.2
