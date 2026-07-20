@@ -1,6 +1,11 @@
 # Name of your application. Used to uniquely configure containers.
 service: recipe_planner
 
+# Default (30s) is too tight for an e2-micro (1 shared vCPU, 1GB RAM):
+# cold boot means a fresh bootsnap compile plus first-time migrations
+# against a Postgres accessory that just started. Give it more room.
+deploy_timeout: 120
+
 # Name of the container image. Reuses the GHCR path already verified working
 # in CI (docker/build-push-action) - a GH PAT with write:packages scope goes
 # in KAMAL_REGISTRY_PASSWORD below. Kamal prepends registry.server itself, so
