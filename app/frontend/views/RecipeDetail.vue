@@ -2,10 +2,26 @@
   <p v-if="loading" class="text-ink/50">Loading...</p>
   <p v-else-if="error" class="text-accent-dark">{{ error }}</p>
   <div v-else-if="recipe">
-    <div class="flex items-start justify-between gap-4">
+    <img
+      v-if="recipe.image_url"
+      :src="recipe.image_url"
+      alt=""
+      class="max-h-96 w-full rounded-xl bg-line/20 object-contain"
+    />
+
+    <div class="mt-6 flex items-start justify-between gap-4">
       <div>
         <h1 class="font-display text-3xl font-semibold text-ink">{{ recipe.title }}</h1>
         <p v-if="recipe.description" class="mt-2 text-ink/60">{{ recipe.description }}</p>
+        <ul v-if="recipe.tags.length" class="mt-3 flex flex-wrap gap-2">
+          <li
+            v-for="tag in recipe.tags"
+            :key="tag.id"
+            class="rounded-full bg-sage/15 px-3 py-1 text-xs font-medium text-ink/70"
+          >
+            {{ tag.name }}
+          </li>
+        </ul>
       </div>
 
       <div v-if="isOwner" class="flex shrink-0 gap-2 text-sm">
@@ -76,6 +92,16 @@
         </li>
       </ol>
     </section>
+
+    <p v-if="recipe.source_url" class="mt-8 border-t border-line pt-6 text-sm text-ink/50">
+      Source:
+      <a
+        :href="recipe.source_url"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-accent hover:underline"
+      >{{ recipe.source_url }}</a>
+    </p>
   </div>
 </template>
 

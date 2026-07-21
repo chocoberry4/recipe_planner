@@ -16,14 +16,62 @@
         <span class="text-sm font-medium text-ink/80">Description</span>
         <textarea
           v-model="description"
-          rows="2"
+          rows="4"
           class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
         ></textarea>
       </label>
+      <div>
+        <span class="text-sm font-medium text-ink/80">Tags</span>
+        <div class="mt-1 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-white px-3 py-2">
+          <span
+            v-for="name in tags"
+            :key="name"
+            class="flex items-center gap-1.5 rounded-full bg-sage/15 px-3 py-1 text-sm text-ink/85"
+          >
+            {{ name }}
+            <button
+              type="button"
+              class="text-ink/40 hover:text-accent-dark cursor-pointer"
+              :aria-label="`Remove tag ${name}`"
+              @click="removeTag(name)"
+            >
+              &times;
+            </button>
+          </span>
+          <input
+            v-model="tagInput"
+            type="text"
+            placeholder="Add a tag..."
+            class="min-w-[8rem] flex-1 border-0 p-0 text-sm text-ink outline-none focus:ring-0"
+            @keydown.enter.prevent="commitTagInput"
+            @keydown.,.prevent="commitTagInput"
+            @blur="commitTagInput"
+          />
+        </div>
+      </div>
       <p class="text-sm text-ink/50">
         Edit any part of this recipe - ingredients, steps, and which ingredients belong to which step - then save.
       </p>
     </div>
+
+    <section v-if="imageUrl || imageCandidates.length" class="mt-6">
+      <h2 class="text-sm font-medium text-ink/80">Image</h2>
+      <p v-if="imageSaveError" class="mt-2 text-sm text-accent-dark">{{ imageSaveError }}</p>
+      <div class="mt-2 flex gap-3 overflow-x-auto pb-1">
+        <button
+          v-for="url in imageCandidates"
+          :key="url"
+          type="button"
+          class="h-24 w-24 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 transition-colors"
+          :class="url === imageUrl ? 'border-accent' : 'border-transparent hover:border-line'"
+          :aria-label="url === imageUrl ? 'Selected cover image' : 'Use this image as the cover'"
+          :aria-pressed="url === imageUrl"
+          @click="selectImage(url)"
+        >
+          <img :src="url" alt="" class="h-full w-full object-cover" loading="lazy" />
+        </button>
+      </div>
+    </section>
 
     <section class="mt-8 border-t border-line pt-6">
       <h2 class="font-display text-lg font-semibold text-sage">Ingredients</h2>
@@ -52,6 +100,7 @@
           :row="ri"
           :groups="groups"
           @remove="removeIngredient(ri._key)"
+          @commit="materializeNewIngredients"
         />
 
         <button
@@ -72,6 +121,7 @@
           :row="ri"
           :groups="groups"
           @remove="removeIngredient(ri._key)"
+          @commit="materializeNewIngredients"
         />
 
         <button
@@ -216,18 +266,26 @@
       >
         Done
       </router-link>
+      <button
+        type="button"
+        class="ml-auto rounded-full border border-line px-5 py-2.5 text-sm font-medium text-ink/70 hover:border-accent-dark hover:text-accent-dark transition-colors cursor-pointer"
+        @click="handleDelete"
+      >
+        Delete
+      </button>
     </div>
   </div>
 </template>
 
 <script setup>
 import { reactive, computed, ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useRecipesStore } from '../stores/recipes'
 import IngredientCombobox from '../components/IngredientCombobox.vue'
 import IngredientRow from '../components/IngredientRow.vue'
 
 const route = useRoute()
+const router = useRouter()
 const recipes = useRecipesStore()
 
 const loading = ref(true)
@@ -239,9 +297,15 @@ const recipe = computed(() => recipes.current)
 
 const title = ref('')
 const description = ref('')
+const tags = ref([])
+const tagInput = ref('')
 const groups = ref([])
 const ingredients = ref([])
 const instructions = ref([])
+
+const imageUrl = ref(null)
+const imageCandidates = ref([])
+const imageSaveError = ref(null)
 
 // Rows removed locally just disappear from the arrays above, but the
 // backend only destroys what's explicitly marked - anything simply absent
@@ -269,6 +333,8 @@ function nextKey() {
 function seedFromRecipe(data) {
   title.value = data.title
   description.value = data.description
+  tags.value = data.tags.map((tag) => tag.name)
+  imageUrl.value = data.image_url
 
   groups.value = data.recipe_ingredient_groups.map((g) => ({
     _key: String(g.id), id: g.id, name: g.name
@@ -307,7 +373,38 @@ onMounted(async () => {
   }
 
   seedFromRecipe(recipe.value)
+
+  const imagesResult = await recipes.fetchImageCandidates(route.params.id)
+  // The currently-selected image stays shown (and highlighted) even if a
+  // fresh scrape no longer turns it up - e.g. the source page changed.
+  imageCandidates.value = imageUrl.value && !imagesResult.imageUrls.includes(imageUrl.value)
+    ? [ imageUrl.value, ...imagesResult.imageUrls ]
+    : imagesResult.imageUrls
 })
+
+async function selectImage(url) {
+  imageSaveError.value = null
+  const previous = imageUrl.value
+  imageUrl.value = url
+
+  const result = await recipes.update(route.params.id, { image_url: url })
+  if (!result.ok) {
+    imageUrl.value = previous
+    imageSaveError.value = (result.errors || []).join(', ') || 'Failed to set cover image.'
+  }
+}
+
+function commitTagInput() {
+  const name = tagInput.value.trim().replace(/,$/, '')
+  tagInput.value = ''
+  if (!name) return
+  if (tags.value.some((existing) => existing.toLowerCase() === name.toLowerCase())) return
+  tags.value.push(name)
+}
+
+function removeTag(name) {
+  tags.value = tags.value.filter((existing) => existing !== name)
+}
 
 function ingredientsInGroup(groupKey) {
   return ingredients.value.filter((ri) => ri.groupId === groupKey)
@@ -385,8 +482,18 @@ function moveInstruction(key, direction) {
 const assignableIngredients = computed(() => ingredients.value.filter((ri) => ri.id))
 const ingredientsById = computed(() => new Map(assignableIngredients.value.map((ri) => [ ri.id, ri ])))
 const assignedIds = computed(() => new Set(Object.values(assignments).flat()))
-const unresolved = computed(() => assignableIngredients.value.filter((ri) => !assignedIds.value.has(ri.id)))
-const unresolvedOptions = computed(() => unresolved.value.map((ri) => ({ id: ri.id, label: ingredientLabel(ri) })))
+// Includes not-yet-saved rows (no `id` yet) so a freshly-added ingredient shows up
+// in the tray immediately, rather than only after a save round-trip assigns it one.
+const unresolved = computed(() =>
+  ingredients.value.filter((ri) => ri.name && (!ri.id || !assignedIds.value.has(ri.id)))
+)
+// Assigning to a step needs a real recipe_ingredient id (instruction_ingredients is
+// a foreign-key join), so unsaved rows are excluded here even though they're shown above.
+const unresolvedOptions = computed(() =>
+  assignableIngredients.value
+    .filter((ri) => !assignedIds.value.has(ri.id))
+    .map((ri) => ({ id: ri.id, label: ingredientLabel(ri) }))
+)
 
 function assignedFor(instructionId) {
   return (assignments[instructionId] || []).map((id) => ingredientsById.value.get(id)).filter(Boolean)
@@ -426,11 +533,13 @@ function buildPayload() {
   return {
     title: title.value,
     description: description.value,
+    tag_names: tags.value,
     recipe_ingredient_groups: [
-      ...groups.value.map((g) => ({
+      ...groups.value.map((g, i) => ({
         id: g.id,
         name: g.name,
-        recipe_ingredients: ingredientsInGroup(g._key).map((ri, i) => toIngredientPayload(ri, i + 1))
+        position: i + 1,
+        recipe_ingredients: ingredientsInGroup(g._key).map((ri, j) => toIngredientPayload(ri, j + 1))
       })),
       ...removedGroupIds.value.map((id) => ({ id, _destroy: true }))
     ],
@@ -450,7 +559,87 @@ function buildPayload() {
   }
 }
 
+// Assigning an ingredient to a step needs a real recipe_ingredient id
+// (instruction_ingredients is a foreign-key join), so a freshly-added row is
+// stuck unassignable until it's persisted. Rather than making the user hit
+// the main Save button just to unlock that, this silently persists the
+// recipe's fields (not the in-progress step-assignment draft - `assignments`
+// is left untouched) as soon as a new ingredient's name is committed, then
+// patches the real id back onto the matching local row so it shows up in the
+// combobox. Matching is by `position`/`step_number` value (not array index),
+// since a same-request blank new row is skipped server-side and would
+// otherwise shift everything after it out of alignment.
+let materializing = false
+let materializePending = false
+
+async function materializeNewIngredients() {
+  const hasNewNamed = ingredients.value.some((ri) => !ri.id && ri.name && ri.name.trim())
+  if (!hasNewNamed) return
+
+  if (materializing) {
+    materializePending = true
+    return
+  }
+
+  materializing = true
+  const result = await recipes.update(route.params.id, buildPayload())
+  materializing = false
+
+  if (result.ok) {
+    const data = result.recipe
+
+    groups.value.forEach((g, i) => {
+      if (g.id) return
+      const match = data.recipe_ingredient_groups.find((r) => r.position === i + 1)
+      if (match) g.id = match.id
+    })
+
+    ingredientsInGroup(null).forEach((ri, i) => {
+      if (ri.id) return
+      const match = data.ingredients.find((r) => r.position === i + 1)
+      if (match) ri.id = match.id
+    })
+
+    groups.value.forEach((g) => {
+      if (!g.id) return
+      const groupData = data.recipe_ingredient_groups.find((r) => r.id === g.id)
+      if (!groupData) return
+      ingredientsInGroup(g._key).forEach((ri, i) => {
+        if (ri.id) return
+        const match = groupData.recipe_ingredients.find((r) => r.position === i + 1)
+        if (match) ri.id = match.id
+      })
+    })
+
+    // New steps get materialized here too, purely to keep local state
+    // consistent with what the server now holds - otherwise the next save
+    // would resend an already-created step as `id: null` and duplicate it.
+    instructions.value.forEach((ins, i) => {
+      if (ins.id) return
+      const match = data.instructions.find((r) => r.step_number === i + 1)
+      if (match) ins.id = match.id
+    })
+
+    removedGroupIds.value = []
+    removedIngredientIds.value = []
+    removedInstructionIds.value = []
+  }
+
+  if (materializePending) {
+    materializePending = false
+    materializeNewIngredients()
+  }
+}
+
+async function handleDelete() {
+  if (!confirm('Delete this recipe?')) return
+
+  const result = await recipes.destroy(route.params.id)
+  if (result.ok) router.push('/recipes')
+}
+
 async function handleSave() {
+  commitTagInput()
   saving.value = true
   saveError.value = null
   saveMessage.value = null
