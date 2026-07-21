@@ -94,7 +94,10 @@ jobs:
 
   deploy:
     needs: [brakeman, bundle_audit, lint, test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Auto-deploy disabled for now - flip this back to
+    # `github.ref == 'refs/heads/main' && github.event_name == 'push'` to
+    # re-enable deploying on every push to main.
+    if: false
     runs-on: ubuntu-latest
 
     steps:
