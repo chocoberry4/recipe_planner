@@ -23,6 +23,7 @@
         placeholder="Ingredient"
         aria-label="Ingredient name"
         class="w-full rounded-lg border border-line bg-white px-2 py-1 pr-6 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+        @blur="$emit('commit')"
       />
       <button
         v-if="row.name"
@@ -80,5 +81,5 @@ defineProps({
   row: { type: Object, required: true },
   groups: { type: Array, required: true }
 })
-defineEmits([ 'remove' ])
+defineEmits([ 'remove', 'commit' ])
 </script>

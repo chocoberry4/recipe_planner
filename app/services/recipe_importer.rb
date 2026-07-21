@@ -64,6 +64,22 @@ class RecipeImporter
     )
   end
 
+  # Re-fetches a recipe's source page and re-extracts its JSON-LD image
+  # candidates, for the review UI's image picker. Not persisted anywhere -
+  # called fresh each time it's needed, which also means it stays correct if
+  # revisited later even though nothing was cached from the original import.
+  def self.image_candidates_for(source_url)
+    return [] if source_url.blank?
+
+    uri = safe_parse(source_url)
+    return [] unless uri
+
+    html = fetch_html(uri)
+    return [] unless html
+
+    JsonLdRecipeExtractor.extract(html)&.image_urls || []
+  end
+
   # Checkbox glyphs some recipe sites/plugins prepend to each ingredient when
   # their "printer-friendly"/checklist view gets copy-pasted (e.g. "▢1 garlic
   # clove, minced"), plus generic bullet characters from pasted markdown/word-

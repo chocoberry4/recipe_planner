@@ -3,8 +3,13 @@
 # scrapers) — returns nil if no usable Recipe node is found, signalling the caller
 # to fall back to manual paste.
 class JsonLdRecipeExtractor
-  Result = Struct.new(:title, :description, :ingredient_lines, :instructions, keyword_init: true)
+  Result = Struct.new(:title, :description, :ingredient_lines, :instructions, :image_urls, keyword_init: true)
   InstructionEntry = Struct.new(:text, :group_name, keyword_init: true)
+
+  # A row of candidate images is meant to be a handful of options to pick
+  # from, not every image a page links - caps how many `image` entries get
+  # surfaced even if a site's JSON-LD lists many.
+  MAX_IMAGES = 8
 
   def self.extract(html)
     new(html).extract
@@ -22,11 +27,31 @@ class JsonLdRecipeExtractor
       title: clean_text(node["name"]),
       description: clean_text(node["description"]),
       ingredient_lines: Array(node["recipeIngredient"]).map { |line| clean_text(line) },
-      instructions: extract_instructions(node["recipeInstructions"])
+      instructions: extract_instructions(node["recipeInstructions"]),
+      image_urls: extract_images(node["image"])
     )
   end
 
   private
+
+  # schema.org's `image` is polymorphic: a single URL string, an array of
+  # URL strings, a single ImageObject ({ "@type": "ImageObject", "url": ... }),
+  # or an array of those - any mix. `Array()` on a Hash would wrongly explode
+  # it into key/value pairs, so the single-item case is wrapped explicitly
+  # rather than relying on Kernel#Array's Hash behavior.
+  def extract_images(raw)
+    list = raw.is_a?(Array) ? raw : [ raw ]
+    list.filter_map { |item| image_url(item) }.uniq.first(MAX_IMAGES)
+  end
+
+  def image_url(item)
+    case item
+    when String
+      item.strip.presence
+    when Hash
+      (item["url"] || item["contentUrl"]).to_s.strip.presence
+    end
+  end
 
   # Some sites' JSON-LD embeds raw, undecoded HTML entities in what's meant to
   # be plain text (e.g. RecipeTinEats' recipeInstructions contains literal

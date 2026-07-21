@@ -58,6 +58,14 @@ export const useRecipesStore = defineStore('recipes', {
       return importRecipe({ title, description, ingredients_text, instructions_text })
     },
 
+    async fetchImageCandidates(recipeId) {
+      const response = await fetch(`/api/v1/recipes/${recipeId}/image_candidates`, { credentials: 'include' })
+      if (!response.ok) return { ok: false, imageUrls: [] }
+
+      const body = await response.json().catch(() => ({}))
+      return { ok: true, imageUrls: body.image_urls || [] }
+    },
+
     async saveAssignments(recipeId, assignments) {
       const response = await fetch(`/api/v1/recipes/${recipeId}/instruction_ingredients`, {
         method: 'PATCH',

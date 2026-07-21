@@ -64,7 +64,7 @@
         <span class="text-sm font-medium text-ink/80">Description</span>
         <textarea
           v-model="description"
-          rows="2"
+          rows="4"
           class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
         ></textarea>
       </label>
