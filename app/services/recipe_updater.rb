@@ -22,11 +22,16 @@ class RecipeUpdater
 
   def call
     ActiveRecord::Base.transaction do
-      @recipe.update!(@params.slice(:title, :description))
+      @recipe.update!(@params.slice(:title, :description, :image_url))
 
       upsert_groups(@params[:recipe_ingredient_groups] || [])
       upsert_recipe_ingredients(@params[:ingredients] || [], group: nil)
       upsert_instructions(@params[:instructions] || [])
+      # tag_names is a full replacement list, unlike the upserts above - so a
+      # partial update that omits it (e.g. the cover-image-only patch from
+      # RecipeReview.vue's selectImage) must leave existing tags untouched
+      # rather than clearing them.
+      sync_tags(@params[:tag_names]) if @params.key?(:tag_names)
     end
 
     Result.new(ok: true, recipe: @recipe.reload, errors: [])
@@ -91,6 +96,15 @@ class RecipeUpdater
         @recipe.recipe_ingredients.create!(shared)
       end
     end
+  end
+
+  # Normalized (stripped/downcased) before lookup, not left to Tag's own
+  # before_validation callback, so a re-typed different-cased name (e.g.
+  # "Dessert" typed again after "dessert" already exists) resolves to the
+  # same row instead of tripping Tag's uniqueness validation.
+  def sync_tags(names)
+    normalized = names.to_a.map { |name| name.to_s.strip.downcase }.reject(&:empty?).uniq
+    @recipe.tags = normalized.map { |name| Tag.find_or_create_by!(name: name) }
   end
 
   def upsert_instructions(list)

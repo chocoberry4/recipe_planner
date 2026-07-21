@@ -15,10 +15,14 @@ module Api
       # select/map) rather than calling .where/.order/.pluck *on* an
       # association, since those always issue a fresh query and silently
       # ignore whatever `includes` already loaded.
-      EAGER_LOAD = { recipe_ingredient_groups: {}, recipe_ingredients: :ingredient, instructions: :instruction_ingredients }.freeze
+      EAGER_LOAD = { recipe_ingredient_groups: {}, recipe_ingredients: :ingredient, instructions: :instruction_ingredients, tags: {} }.freeze
 
-      attributes :id, :title, :description, :user_id, :recipe_ingredient_groups,
-                 :ingredients, :instructions, :created_at, :updated_at
+      attributes :id, :title, :description, :image_url, :user_id, :source_url, :recipe_ingredient_groups,
+                 :ingredients, :instructions, :tags, :created_at, :updated_at
+
+      def tags
+        object.tags.sort_by(&:name).map { |tag| { id: tag.id, name: tag.name } }
+      end
 
       def recipe_ingredient_groups
         object.recipe_ingredient_groups.sort_by(&:position).map do |group|

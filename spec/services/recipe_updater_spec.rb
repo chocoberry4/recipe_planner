@@ -169,6 +169,56 @@ RSpec.describe RecipeUpdater do
     end
   end
 
+  describe "tags" do
+    it "assigns tags by name, creating new Tag rows as needed" do
+      recipe = create(:recipe)
+
+      result = call(recipe, { tag_names: [ "Dessert", "quick" ] })
+
+      expect(result).to be_ok
+      expect(result.recipe.tags.pluck(:name)).to contain_exactly("dessert", "quick")
+    end
+
+    it "reuses an existing tag regardless of the casing it's re-typed with" do
+      create(:tag, name: "dessert")
+      recipe = create(:recipe)
+
+      result = call(recipe, { tag_names: [ "Dessert" ] })
+
+      expect(result).to be_ok
+      expect(Tag.where(name: "dessert").count).to eq(1)
+    end
+
+    it "removes tags no longer present in the list" do
+      recipe = create(:recipe)
+      recipe.tags << create(:tag, name: "old")
+
+      result = call(recipe, { tag_names: [] })
+
+      expect(result).to be_ok
+      expect(result.recipe.tags).to be_empty
+    end
+
+    it "leaves existing tags untouched when tag_names is omitted entirely" do
+      recipe = create(:recipe)
+      recipe.tags << create(:tag, name: "keep-me")
+
+      result = call(recipe, { title: recipe.title, description: recipe.description })
+
+      expect(result).to be_ok
+      expect(result.recipe.tags.pluck(:name)).to eq([ "keep-me" ])
+    end
+
+    it "strips whitespace and drops blank/duplicate entries" do
+      recipe = create(:recipe)
+
+      result = call(recipe, { tag_names: [ " spicy ", "spicy", "Spicy", "" ] })
+
+      expect(result).to be_ok
+      expect(result.recipe.tags.pluck(:name)).to eq([ "spicy" ])
+    end
+  end
+
   describe "instructions" do
     it "adds a new instruction with no id" do
       recipe = create(:recipe)

@@ -11,7 +11,7 @@ module Api
       before_action :find_recipe, only: %i[show update destroy]
 
       def index
-        render json: current_user.recipes, each_serializer: RecipeSummarySerializer
+        render json: current_user.recipes.includes(:tags), each_serializer: RecipeSummarySerializer
       end
 
       def show
@@ -60,13 +60,14 @@ module Api
         # re-resolve it via Ingredient.find_or_create_by (see RecipeUpdater),
         # not mutate the shared Ingredient row in place.
         params.require(:recipe).permit(
-          :title, :description,
+          :title, :description, :image_url,
           recipe_ingredient_groups: [
             :id, :name, :position, :_destroy,
             recipe_ingredients: [ :id, :name, :quantity, :unit, :preparation, :position, :_destroy ]
           ],
           ingredients: [ :id, :name, :quantity, :unit, :preparation, :position, :_destroy ],
-          instructions: [ :id, :description, :step_number, :recipe_ingredient_group_id, :_destroy ]
+          instructions: [ :id, :description, :step_number, :recipe_ingredient_group_id, :_destroy ],
+          tag_names: []
         )
       end
 
