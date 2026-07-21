@@ -32,12 +32,17 @@ module RecipePlanner
     # Cookie-based sessions are used for authentication (see
     # docs/adr/0001-cookie-session-auth.md), so the session/cookie middleware
     # that API-only mode skips by default needs to be added back explicitly.
-    # `secure` is left off in development/test so cookies still work over
-    # plain HTTP; production terminates SSL and forces secure cookies.
+    # `secure` was `Rails.env.production?`, which marks the cookie Secure any
+    # time RAILS_ENV=production - regardless of whether real TLS actually
+    # terminates in front of the app. Neither GCP (no domain/cert yet) nor
+    # Unraid (plain HTTP on the LAN) do, so browsers silently refused to
+    # store/send back a Secure cookie over those plain-HTTP connections,
+    # breaking login/signup right after the cookie was set. Switch back to
+    # tying this to production once a real domain + TLS cert sits in front.
     config.session_store :cookie_store,
       key: "_recipe_planner_session",
       same_site: :lax,
-      secure: Rails.env.production?
+      secure: false
     config.middleware.use ActionDispatch::Cookies
     config.middleware.use config.session_store, config.session_options
   end

@@ -71,10 +71,16 @@ FROM base
 COPY --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --from=build /rails /rails
 
-# Run and own only the runtime files as a non-root user for security
+# Run and own only the runtime files as a non-root user for security.
+# chmod (not just chown) matters here: building this image on Windows via
+# Docker Desktop's file-sharing layer can carry over directories with the
+# write bit stripped (e.g. fresh/empty tmp/storage subfolders showing up as
+# mode 555) - a Linux-native build (e.g. GitHub Actions) never hits this, so
+# it silently worked in CI/GCP but broke on a locally-built image.
 RUN groupadd --system --gid 1000 rails && \
     useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
-    chown -R rails:rails db log storage tmp
+    chown -R rails:rails db log storage tmp && \
+    chmod -R u+rwX db log storage tmp
 USER 1000:1000
 
 # Entrypoint prepares the database.

@@ -21,11 +21,14 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 
-  # Assume all access to the app is happening through a SSL-terminating reverse proxy.
-  config.assume_ssl = true
-
-  # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  config.force_ssl = true
+  # No SSL termination exists anywhere in front of this app yet (no domain/TLS
+  # cert - Kamal's proxy.ssl is false, and Unraid serves plain HTTP on the
+  # LAN). With these on, Rails marked the session cookie `Secure`, which
+  # browsers silently refuse to store/send back over a non-HTTPS connection -
+  # breaking login/signup right after the cookie was set. Turn back on once a
+  # real domain + TLS cert sits in front of the app.
+  config.assume_ssl = false
+  config.force_ssl = false
 
   # Skip http-to-https redirect for the default health check endpoint.
   # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }

@@ -1,0 +1,81 @@
+# Unraid deployment - pulls the same image built for GCP/Kamal, but run
+# straight via Docker Compose (Unraid's "Compose Manager" plugin, or
+# docker-compose CLI over SSH) instead of Kamal.
+#
+# Build + push to the local registry (run from the repo root, on your
+# computer, after `docker login 192.168.50.181:5000` once):
+#   docker build -t 192.168.50.181:5000/recipe_planner:latest .
+#   docker push 192.168.50.181:5000/recipe_planner:latest
+#
+# Then on Unraid: cd into this directory and run `docker-compose up -d`
+# (running from here, not the repo root, so Compose auto-loads the sibling
+# .env file below for the ${...} values referenced in this file).
+#
+# Secrets live in a sibling `.env` file (gitignored, never committed) with:
+#   RAILS_MASTER_KEY=<contents of config/master.key>
+#   RECIPE_PLANNER_DATABASE_PASSWORD=<same value as POSTGRES_PASSWORD below>
+#   POSTGRES_PASSWORD=<same value as RECIPE_PLANNER_DATABASE_PASSWORD above>
+#
+# Before first `up`, make sure the bind-mount host directory already exists
+# and is owned by uid/gid 1000 (the image's non-root `rails` user) - Docker
+# auto-creates a missing bind-mount target as root:root, which this image
+# can't self-heal at boot (it has no root-level entrypoint step, unlike
+# postgres's official image):
+#   mkdir -p /mnt/user/appdata/recipe_planner
+#   chown -R 1000:1000 /mnt/user/appdata/recipe_planner
+
+services:
+  recipe_planner:
+    image: 192.168.50.181:5000/recipe_planner:latest
+    pull_policy: always
+    container_name: recipe_planner
+    restart: unless-stopped
+    # Matches the Dockerfile's own `USER 1000:1000` - belt-and-suspenders in
+    # case anything about how this container is started overrides it. The
+    # bind-mounted host directory below must also be chowned to 1000:1000
+    # (see the header comment / chown instructions), since this image (unlike
+    # postgres's official one) has no root-level entrypoint step to fix
+    # ownership on a mismatched bind mount at boot.
+    user: "1000:1000"
+    depends_on:
+      - recipe_planner-db
+    ports:
+      # LAN-only - do not forward this port on your router. 3000/8080/8154/3888
+      # are already taken by other containers, so this uses 8081 instead.
+      # Container listens on 80 (Thruster) - see Dockerfile's EXPOSE 80.
+      - "8081:80"
+    volumes:
+      # Active Storage uploads - must persist across container recreation.
+      - /mnt/user/appdata/recipe_planner:/rails/storage
+    environment:
+      # Values come from the sibling .env file, not hardcoded here - see the
+      # header comment above. This decrypts config/credentials.yml.enc.
+      - RAILS_MASTER_KEY=${RAILS_MASTER_KEY}
+      - RECIPE_PLANNER_DATABASE_PASSWORD=${RECIPE_PLANNER_DATABASE_PASSWORD}
+      - DB_HOST=recipe_planner-db
+      # Runs the Solid Queue job supervisor inside this single web container,
+      # matching the GCP/Kamal setup - no separate job container here either.
+      - SOLID_QUEUE_IN_PUMA=true
+    labels:
+      - "net.unraid.docker.webui=http://[IP]:[PORT:8081]/"
+
+  recipe_planner-db:
+    image: postgres:18
+    container_name: recipe_planner-db
+    restart: unless-stopped
+    volumes:
+      # postgres:18 expects a single mount at /var/lib/postgresql, not
+      # .../data like older Postgres versions - mounting at the old path
+      # makes it detect "data at the old expected path" and refuse to start.
+      # See https://github.com/docker-library/postgres/pull/1259 and the
+      # same fix already applied in config/deploy.yml.
+      - /mnt/user/appdata/recipe_planner-db:/var/lib/postgresql
+    environment:
+      - POSTGRES_USER=recipe_planner
+      - POSTGRES_DB=recipe_planner_production
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    # Uncomment only if you want to reach this Postgres directly from another
+    # LAN machine (e.g. a desktop psql client) - otherwise leave it internal,
+    # reachable only from the recipe_planner container on this compose network.
+    # ports:
+    #   - "5432:5432"

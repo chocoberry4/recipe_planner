@@ -6,9 +6,11 @@
 
 # Ignore bundler config.
 /.bundle
+/vendor/bundle
 
 # Ignore all environment files.
 /.env*
+/unraid/.env
 
 # Ignore all logfiles and tempfiles.
 /log/*

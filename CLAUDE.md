@@ -53,6 +53,17 @@ docker-compose exec -e RAILS_ENV=test -e DATABASE_URL=postgres://postgres:postgr
 
 See [k8s/README.md](k8s/README.md) for Kubernetes deployment instructions including SSL/TLS setup, scaling, and troubleshooting.
 
+## Deployment
+
+Two independent deployment paths run from the same `Dockerfile`/image:
+
+- **GCP + Kamal** (primary): `config/deploy.yml` + `.kamal/secrets`, deployed via `bin/kamal deploy` — also wired into `.github/workflows/ci.yml`'s `deploy` job on every push. Runs on a free-tier e2-micro VM (1 shared vCPU, 1GB RAM + a 2GB swap file) with no domain/TLS cert yet, hence `proxy.ssl: false`.
+- **Unraid** (self-hosted alternative): `unraid/docker-compose.yml` + a sibling, gitignored `unraid/.env` for secrets. Pulls from a self-hosted Docker Registry v2 on the LAN (`192.168.50.181:5000`) — build+push is manual from a dev machine, since GitHub Actions runners can't reach LAN IPs, so this path isn't part of CI.
+
+**No real TLS terminates in front of either deployment yet.** `config/environments/production.rb`'s `assume_ssl`/`force_ssl` and `config/application.rb`'s `session_store` `secure:` option were both previously tied to `Rails.env.production?` alone — which silently broke login/signup, since browsers refuse to store/send back a cookie marked `Secure` over a non-HTTPS connection. Both are now hardcoded off; only flip them back once a real domain + TLS cert sits in front of the app.
+
+**Building the image on Windows**: the Dockerfile's final stage `chown`s *and* `chmod`s `db log storage tmp` — the chmod matters because Docker Desktop's Windows file-sharing layer can carry over fresh/empty directories with the write bit stripped (mode 555), which a Linux-native build (e.g. GitHub Actions) never hits. An `Errno::EACCES` on `/rails/tmp/sockets` at container boot, only on a locally-built image, traces back to this.
+
 ## Core Features
 
 ### Phase 1: Personal Recipe & Meal Planning (Current Focus)
