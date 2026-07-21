@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-cream text-ink flex flex-col">
     <header class="sticky top-0 z-10 border-b border-line bg-cream/90 backdrop-blur">
-      <nav class="max-w-4xl mx-auto flex items-center justify-between px-4 py-3">
+      <nav class="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
         <router-link to="/" class="font-display text-xl font-semibold tracking-tight">
           Recipe Planner
         </router-link>
@@ -12,7 +12,10 @@
           </router-link>
 
           <template v-if="auth.isLoggedIn">
-            <span class="text-ink/40">{{ auth.user.username }}</span>
+            <router-link to="/settings" class="text-ink/70 hover:text-accent transition-colors">
+              Settings
+            </router-link>
+            <span class="text-ink/40">{{ auth.user.username || auth.user.email }}</span>
             <button
               type="button"
               class="text-ink/70 hover:text-accent transition-colors cursor-pointer"
@@ -36,7 +39,7 @@
       </nav>
     </header>
 
-    <main class="flex-1 w-full max-w-4xl mx-auto px-4 py-10">
+    <main class="flex-1 w-full max-w-6xl mx-auto px-4 py-10">
       <router-view />
     </main>
   </div>

@@ -17,3 +17,39 @@
 body {
   font-family: var(--font-sans);
 }
+
+/*
+ * Dark mode works by overriding the same --color-* variables the @theme
+ * block above defines (plus --color-white, which Tailwind's built-in
+ * palette also exposes as a variable) rather than adding dark: variants to
+ * every utility class across every view - every bg-cream/text-ink/bg-white/
+ * etc. usage in the app picks up the override for free since Tailwind v4
+ * utilities read colors via var().
+ *
+ * Two ways a user ends up in dark mode:
+ * - "system" (the default): follows the OS via prefers-color-scheme, unless
+ *   they've explicitly forced light mode (data-theme="light" below wins).
+ * - an explicit choice from Settings.vue, applied as document.documentElement
+ *   .dataset.theme ("light" or "dark") and persisted to localStorage - see
+ *   stores/theme.js. The inline script in application.html.erb applies this
+ *   synchronously before first paint to avoid a light-mode flash.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-cream: #1c1917;
+    --color-ink: #ece6dc;
+    --color-line: #3a352c;
+    --color-white: #262220;
+    --color-accent-soft: #3d2a22;
+    --color-sage: #7fa17d;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-cream: #1c1917;
+  --color-ink: #ece6dc;
+  --color-line: #3a352c;
+  --color-white: #262220;
+  --color-accent-soft: #3d2a22;
+  --color-sage: #7fa17d;
+}

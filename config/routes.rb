@@ -4,8 +4,10 @@ Rails.application.routes.draw do
       resources :users
       resources :recipes do
         resource :instruction_ingredients, only: :update
+        resources :image_candidates, only: :index, controller: "recipe_image_candidates"
       end
       resources :ingredients
+      resource :pinned_tags, only: %i[show update]
 
       post "recipes/import", to: "recipe_imports#create"
 

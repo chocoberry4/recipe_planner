@@ -4,6 +4,14 @@
     <title>Recipe Planner</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
+    <script>
+      (function () {
+        var theme = localStorage.getItem("recipe-planner-theme");
+        if (theme === "dark" || theme === "light") {
+          document.documentElement.dataset.theme = theme;
+        }
+      })();
+    </script>
     <%= vite_client_tag %>
     <%= vite_javascript_tag "main" %>
   </head>
