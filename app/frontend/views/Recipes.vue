@@ -133,14 +133,14 @@ const quickOnly = ref(false)
 // behind after a recipe's duration changes, no risk of the free-text tag
 // editor colliding with it).
 const QUICK_THRESHOLD_MINUTES = 30
-const QUICK_LABEL = `< ${QUICK_THRESHOLD_MINUTES} min`
+const QUICK_LABEL = `${QUICK_THRESHOLD_MINUTES} min or less`
 
 function isOwner(recipe) {
   return auth.isLoggedIn && recipe.user_id === auth.user.id
 }
 
 function isQuick(recipe) {
-  return recipe.duration_minutes != null && recipe.duration_minutes < QUICK_THRESHOLD_MINUTES
+  return recipe.duration_minutes != null && recipe.duration_minutes <= QUICK_THRESHOLD_MINUTES
 }
 
 const anyQuickRecipes = computed(() => recipes.value.some(isQuick))
