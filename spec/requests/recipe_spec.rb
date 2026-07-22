@@ -50,6 +50,16 @@ RSpec.describe "Recipes", type: :request do
       expect(body["description"]).to eq(recipe.description)
     end
 
+    it "serializes duration_minutes" do
+      recipe = create(:recipe, duration_minutes: 45)
+      log_in_as(recipe.user)
+
+      get "/api/v1/recipes/#{recipe.id}"
+
+      body = JSON.parse(response.body)
+      expect(body["duration_minutes"]).to eq(45)
+    end
+
     it "serializes grouped and ungrouped ingredients with their preparation" do
       recipe = create(:recipe)
       log_in_as(recipe.user)
@@ -153,6 +163,16 @@ RSpec.describe "Recipes", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(recipe.reload.title).to eq("New Title")
+    end
+
+    it "updates duration_minutes" do
+      recipe = create(:recipe)
+      log_in_as(recipe.user)
+
+      patch "/api/v1/recipes/#{recipe.id}", params: { recipe: { duration_minutes: 30 } }
+
+      expect(response).to have_http_status(:ok)
+      expect(recipe.reload.duration_minutes).to eq(30)
     end
 
     it "returns not_found when a non-owner tries to update the recipe" do

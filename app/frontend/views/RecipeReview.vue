@@ -20,6 +20,15 @@
           class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
         ></textarea>
       </label>
+      <label class="block">
+        <span class="text-sm font-medium text-ink/80">Duration (minutes)</span>
+        <input
+          v-model.number="durationMinutes"
+          type="number"
+          min="0"
+          class="mt-1 w-32 rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+        />
+      </label>
       <div>
         <span class="text-sm font-medium text-ink/80">Tags</span>
         <div class="mt-1 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-white px-3 py-2">
@@ -323,6 +332,7 @@ const recipe = computed(() => recipes.current)
 
 const title = ref('')
 const description = ref('')
+const durationMinutes = ref(null)
 const tags = ref([])
 const tagInput = ref('')
 const groups = ref([])
@@ -359,6 +369,7 @@ function nextKey() {
 function seedFromRecipe(data) {
   title.value = data.title
   description.value = data.description
+  durationMinutes.value = data.duration_minutes
   tags.value = data.tags.map((tag) => tag.name)
   imageUrl.value = data.image_url
 
@@ -560,6 +571,7 @@ function buildPayload() {
   return {
     title: title.value,
     description: description.value,
+    duration_minutes: durationMinutes.value,
     tag_names: tags.value,
     recipe_ingredient_groups: [
       ...groups.value.map((g, i) => ({

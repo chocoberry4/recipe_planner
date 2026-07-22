@@ -60,7 +60,7 @@ module Api
         # re-resolve it via Ingredient.find_or_create_by (see RecipeUpdater),
         # not mutate the shared Ingredient row in place.
         params.require(:recipe).permit(
-          :title, :description, :image_url,
+          :title, :description, :image_url, :duration_minutes,
           recipe_ingredient_groups: [
             :id, :name, :position, :_destroy,
             recipe_ingredients: [ :id, :name, :quantity, :unit, :preparation, :position, :_destroy ]

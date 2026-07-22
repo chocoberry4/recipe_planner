@@ -22,7 +22,7 @@ class RecipeUpdater
 
   def call
     ActiveRecord::Base.transaction do
-      @recipe.update!(@params.slice(:title, :description, :image_url))
+      @recipe.update!(@params.slice(:title, :description, :image_url, :duration_minutes))
 
       upsert_groups(@params[:recipe_ingredient_groups] || [])
       upsert_recipe_ingredients(@params[:ingredients] || [], group: nil)

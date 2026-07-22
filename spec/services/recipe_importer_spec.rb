@@ -71,6 +71,23 @@ RSpec.describe RecipeImporter do
       expect(result.recipe.instructions.find_by(description: "Serve.").image_url).to be_nil
     end
 
+    it "persists duration_minutes parsed from the source's totalTime" do
+      user = create(:user)
+      html = html_with_json_ld(
+        "@type" => "Recipe",
+        "name" => "Tacos",
+        "recipeIngredient" => [ "2 eggs" ],
+        "recipeInstructions" => [ { "@type" => "HowToStep", "text" => "Whisk the eggs." } ],
+        "totalTime" => "PT45M"
+      )
+      allow(described_class).to receive(:fetch_html).and_return(html)
+
+      result = described_class.from_url("https://example.com/tacos", user: user)
+
+      expect(result).to be_ok
+      expect(result.recipe.duration_minutes).to eq(45)
+    end
+
     it "strips checkbox glyphs baked directly into a site's JSON-LD recipeIngredient text" do
       user = create(:user)
       html = html_with_json_ld(

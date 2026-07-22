@@ -45,6 +45,7 @@ class RecipeImporter
       description: extracted.description,
       ingredient_lines: extracted.ingredient_lines,
       instructions: extracted.instructions,
+      duration_minutes: extracted.duration_minutes,
       user: user,
       source_url: url
     )
@@ -59,6 +60,7 @@ class RecipeImporter
       description: description,
       ingredient_lines: ingredient_lines,
       instructions: instructions,
+      duration_minutes: nil,
       user: user,
       source_url: nil
     )
@@ -114,14 +116,15 @@ class RecipeImporter
   end
   private_class_method :failure
 
-  def self.persist(title:, description:, ingredient_lines:, instructions:, user:, source_url:)
+  def self.persist(title:, description:, ingredient_lines:, instructions:, duration_minutes:, user:, source_url:)
     recipe = nil
 
     ActiveRecord::Base.transaction do
       recipe = user.recipes.create!(
         title: title.presence || "Imported recipe",
         description: description.presence || default_description(source_url),
-        source_url: source_url
+        source_url: source_url,
+        duration_minutes: duration_minutes
       )
 
       create_ingredients(recipe, ingredient_lines)

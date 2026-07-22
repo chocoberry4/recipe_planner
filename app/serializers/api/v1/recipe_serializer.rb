@@ -17,8 +17,8 @@ module Api
       # ignore whatever `includes` already loaded.
       EAGER_LOAD = { recipe_ingredient_groups: {}, recipe_ingredients: :ingredient, instructions: :instruction_ingredients, tags: {} }.freeze
 
-      attributes :id, :title, :description, :image_url, :user_id, :source_url, :recipe_ingredient_groups,
-                 :ingredients, :instructions, :tags, :created_at, :updated_at
+      attributes :id, :title, :description, :image_url, :user_id, :source_url, :duration_minutes,
+                 :recipe_ingredient_groups, :ingredients, :instructions, :tags, :created_at, :updated_at
 
       def tags
         object.tags.sort_by(&:name).map { |tag| { id: tag.id, name: tag.name } }

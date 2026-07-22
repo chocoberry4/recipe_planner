@@ -113,6 +113,48 @@ RSpec.describe JsonLdRecipeExtractor do
     expect(result.instructions.first.image_url).to eq("https://example.com/marinade.jpg")
   end
 
+  it "extracts duration_minutes from totalTime" do
+    html = html_with_json_ld(
+      "@type" => "Recipe",
+      "name" => "Tacos",
+      "recipeIngredient" => [],
+      "recipeInstructions" => [],
+      "totalTime" => "PT1H30M"
+    )
+
+    result = described_class.extract(html)
+
+    expect(result.duration_minutes).to eq(90)
+  end
+
+  it "falls back to summing prepTime and cookTime when totalTime is absent" do
+    html = html_with_json_ld(
+      "@type" => "Recipe",
+      "name" => "Tacos",
+      "recipeIngredient" => [],
+      "recipeInstructions" => [],
+      "prepTime" => "PT15M",
+      "cookTime" => "PT45M"
+    )
+
+    result = described_class.extract(html)
+
+    expect(result.duration_minutes).to eq(60)
+  end
+
+  it "returns nil duration_minutes when no time fields are present" do
+    html = html_with_json_ld(
+      "@type" => "Recipe",
+      "name" => "Tacos",
+      "recipeIngredient" => [],
+      "recipeInstructions" => []
+    )
+
+    result = described_class.extract(html)
+
+    expect(result.duration_minutes).to be_nil
+  end
+
   it "unwraps an @graph array to find the Recipe node" do
     html = html_with_json_ld(
       "@context" => "https://schema.org",

@@ -12,6 +12,7 @@
     <div class="mt-6 flex items-start justify-between gap-4">
       <div>
         <h1 class="font-display text-3xl font-semibold text-ink">{{ recipe.title }}</h1>
+        <p v-if="formattedDuration" class="mt-1 text-sm font-medium text-ink/50">{{ formattedDuration }}</p>
         <p v-if="recipe.description" class="mt-2 text-ink/60">{{ recipe.description }}</p>
         <ul v-if="recipe.tags.length" class="mt-3 flex flex-wrap gap-2">
           <li
@@ -153,6 +154,17 @@ const ingredientsById = computed(() => recipe.value ? buildIngredientsById(recip
 function stepIngredients(step) {
   return stepIngredientsFor(ingredientsById.value, step)
 }
+
+const formattedDuration = computed(() => {
+  const minutes = recipe.value?.duration_minutes
+  if (!minutes) return null
+
+  const hours = Math.floor(minutes / 60)
+  const remainder = minutes % 60
+  if (hours && remainder) return `${hours} hr ${remainder} min`
+  if (hours) return `${hours} hr`
+  return `${remainder} min`
+})
 
 onMounted(async () => {
   const result = await recipes.fetchOne(route.params.id)

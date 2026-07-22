@@ -3,7 +3,7 @@
 # scrapers) — returns nil if no usable Recipe node is found, signalling the caller
 # to fall back to manual paste.
 class JsonLdRecipeExtractor
-  Result = Struct.new(:title, :description, :ingredient_lines, :instructions, :image_urls, keyword_init: true)
+  Result = Struct.new(:title, :description, :ingredient_lines, :instructions, :image_urls, :duration_minutes, keyword_init: true)
   InstructionEntry = Struct.new(:text, :group_name, :image_url, keyword_init: true)
 
   # A row of candidate images is meant to be a handful of options to pick
@@ -28,11 +28,35 @@ class JsonLdRecipeExtractor
       description: clean_text(node["description"]),
       ingredient_lines: Array(node["recipeIngredient"]).map { |line| clean_text(line) },
       instructions: extract_instructions(node["recipeInstructions"]),
-      image_urls: extract_images(node["image"])
+      image_urls: extract_images(node["image"]),
+      duration_minutes: extract_duration_minutes(node)
     )
   end
 
   private
+
+  # Prefers the site's own totalTime; falls back to summing prepTime + cookTime
+  # when totalTime isn't given, since some sites only publish those two.
+  def extract_duration_minutes(node)
+    total = iso8601_duration_minutes(node["totalTime"])
+    return total if total
+
+    parts = [ iso8601_duration_minutes(node["prepTime"]), iso8601_duration_minutes(node["cookTime"]) ].compact
+    parts.empty? ? nil : parts.sum
+  end
+
+  # schema.org durations are ISO 8601 ("PT45M", "PT1H30M", "PT2H") - only the
+  # hours/minutes time components are parsed, since seconds/days/months don't
+  # apply to a recipe's cook time.
+  def iso8601_duration_minutes(value)
+    return nil unless value.is_a?(String)
+
+    match = value.match(/\APT(?:(?<hours>\d+)H)?(?:(?<minutes>\d+)M)?\z/)
+    return nil unless match
+
+    total = match[:hours].to_i * 60 + match[:minutes].to_i
+    total.positive? ? total : nil
+  end
 
   # schema.org's `image` is polymorphic: a single URL string, an array of
   # URL strings, a single ImageObject ({ "@type": "ImageObject", "url": ... }),

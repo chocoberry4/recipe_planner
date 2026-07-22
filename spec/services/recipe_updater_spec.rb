@@ -15,6 +15,15 @@ RSpec.describe RecipeUpdater do
     expect(result.recipe.description).to eq("New description")
   end
 
+  it "updates duration_minutes" do
+    recipe = create(:recipe)
+
+    result = call(recipe, { duration_minutes: 45 })
+
+    expect(result).to be_ok
+    expect(result.recipe.duration_minutes).to eq(45)
+  end
+
   it "rolls back and returns errors when a base field is invalid" do
     recipe = create(:recipe, title: "Original")
 
