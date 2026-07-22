@@ -69,21 +69,35 @@
       <div v-for="group in recipe.recipe_ingredient_groups" :key="group.id" class="mt-4">
         <h3 class="text-sm font-semibold text-ink/70">{{ group.name }}</h3>
         <ul class="mt-2 space-y-1.5 text-ink/85">
-          <li v-for="ri in group.recipe_ingredients" :key="ri.id" class="flex gap-2">
-            <span class="text-accent">&bull;</span>
-            <span>
-              {{ ri.quantity }} {{ ri.unit }} {{ ri.name }}<span v-if="ri.preparation">, {{ ri.preparation }}</span>
-            </span>
+          <li v-for="ri in group.recipe_ingredients" :key="ri.id">
+            <label class="flex cursor-pointer items-start gap-2">
+              <input
+                type="checkbox"
+                class="mt-1 h-4 w-4 shrink-0 accent-accent"
+                :checked="checkedIngredientIds.has(ri.id)"
+                @change="toggleChecked(ri.id)"
+              />
+              <span :class="{ 'text-ink/40 line-through': checkedIngredientIds.has(ri.id) }">
+                {{ ri.quantity }} {{ ri.unit }} {{ ri.name }}<span v-if="ri.preparation">, {{ ri.preparation }}</span>
+              </span>
+            </label>
           </li>
         </ul>
       </div>
 
       <ul v-if="recipe.ingredients.length" class="mt-4 space-y-1.5 text-ink/85">
-        <li v-for="ri in recipe.ingredients" :key="ri.id" class="flex gap-2">
-          <span class="text-accent">&bull;</span>
-          <span>
-            {{ ri.quantity }} {{ ri.unit }} {{ ri.name }}<span v-if="ri.preparation">, {{ ri.preparation }}</span>
-          </span>
+        <li v-for="ri in recipe.ingredients" :key="ri.id">
+          <label class="flex cursor-pointer items-start gap-2">
+            <input
+              type="checkbox"
+              class="mt-1 h-4 w-4 shrink-0 accent-accent"
+              :checked="checkedIngredientIds.has(ri.id)"
+              @change="toggleChecked(ri.id)"
+            />
+            <span :class="{ 'text-ink/40 line-through': checkedIngredientIds.has(ri.id) }">
+              {{ ri.quantity }} {{ ri.unit }} {{ ri.name }}<span v-if="ri.preparation">, {{ ri.preparation }}</span>
+            </span>
+          </label>
         </li>
       </ul>
     </section>
@@ -150,6 +164,14 @@ const error = ref(null)
 const showDeleteConfirm = ref(false)
 const recipe = computed(() => recipes.current)
 const isOwner = computed(() => auth.isLoggedIn && recipe.value?.user_id === auth.user.id)
+
+// Prep-checklist state only - not persisted, resets on reload.
+const checkedIngredientIds = ref(new Set())
+
+function toggleChecked(id) {
+  if (checkedIngredientIds.value.has(id)) checkedIngredientIds.value.delete(id)
+  else checkedIngredientIds.value.add(id)
+}
 
 const ingredientsById = computed(() => recipe.value ? buildIngredientsById(recipe.value) : new Map())
 

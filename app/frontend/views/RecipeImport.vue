@@ -102,15 +102,30 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useRecipesStore } from '../stores/recipes'
+import { useMealPlansStore } from '../stores/mealPlans'
 
+const route = useRoute()
 const router = useRouter()
 const recipes = useRecipesStore()
+const mealPlans = useMealPlansStore()
 
-const mode = ref('url')
+// Arriving from the planner's "Add" link on a freeform (non-recipe) meal
+// plan entry pre-fills the title so the name doesn't need retyping - "paste"
+// is the only mode with a title field, so that's the mode this lands in.
+const prefillTitle = typeof route.query.title === 'string' ? route.query.title : ''
+// Same origin: once the recipe exists, the slot that prompted its creation
+// is relinked to it - otherwise the planner keeps showing the original
+// typed-out label forever, even after a real recipe now exists for it. The
+// title actually saved (especially via URL import, which ignores
+// prefillTitle entirely) can end up different from the label the slot still
+// has, which is exactly the mismatch this closes.
+const relinkMealPlanId = typeof route.query.mealPlanId === 'string' ? route.query.mealPlanId : null
+
+const mode = ref(prefillTitle ? 'paste' : 'url')
 const url = ref('')
-const title = ref('')
+const title = ref(prefillTitle)
 const description = ref('')
 const ingredientsText = ref('')
 const instructionsText = ref('')
@@ -123,6 +138,10 @@ const ERROR_MESSAGES = {
   invalid_url: "That doesn't look like a URL we can fetch.",
 }
 
+async function relinkMealPlanIfNeeded(recipeId) {
+  if (relinkMealPlanId) await mealPlans.relink(relinkMealPlanId, recipeId)
+}
+
 async function handleUrlSubmit() {
   submitting.value = true
   error.value = null
@@ -131,6 +150,7 @@ async function handleUrlSubmit() {
 
   submitting.value = false
   if (result.ok) {
+    await relinkMealPlanIfNeeded(result.recipe.id)
     router.push(`/recipes/${result.recipe.id}/review`)
   } else {
     error.value = ERROR_MESSAGES[result.error] || 'Import failed.'
@@ -150,6 +170,7 @@ async function handleTextSubmit() {
 
   submitting.value = false
   if (result.ok) {
+    await relinkMealPlanIfNeeded(result.recipe.id)
     const destination = result.recipe.instructions.length
       ? `/recipes/${result.recipe.id}/review`
       : `/recipes/${result.recipe.id}`

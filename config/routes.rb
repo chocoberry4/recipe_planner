@@ -7,7 +7,9 @@ Rails.application.routes.draw do
         resources :image_candidates, only: :index, controller: "recipe_image_candidates"
       end
       resources :ingredients
+      resources :meal_plans, only: %i[index create update destroy]
       resource :pinned_tags, only: %i[show update]
+      resource :user_preferences, only: %i[show update]
 
       post "recipes/import", to: "recipe_imports#create"
 

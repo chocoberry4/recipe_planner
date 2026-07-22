@@ -50,10 +50,6 @@ module Api
         set_csrf_cookie
       end
 
-      def user_json(user)
-        { id: user.id, email: user.email, username: user.username }
-      end
-
       def signup_params
         params.require(:user).permit(:email, :username, :password, :password_confirmation)
       end

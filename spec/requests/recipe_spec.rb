@@ -186,6 +186,16 @@ RSpec.describe "Recipes", type: :request do
       expect(recipe.reload.duration_minutes).to eq(30)
     end
 
+    it "updates source_url" do
+      recipe = create(:recipe)
+      log_in_as(recipe.user)
+
+      patch "/api/v1/recipes/#{recipe.id}", params: { recipe: { source_url: "https://example.com/a-recipe" } }
+
+      expect(response).to have_http_status(:ok)
+      expect(recipe.reload.source_url).to eq("https://example.com/a-recipe")
+    end
+
     it "returns not_found when a non-owner tries to update the recipe" do
       recipe = create(:recipe)
       log_in_as(create(:user))

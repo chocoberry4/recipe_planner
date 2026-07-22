@@ -29,6 +29,15 @@
           class="mt-2 w-32 rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
       </label>
+      <label class="block">
+        <span class="text-sm font-medium text-ink/80">Source URL</span>
+        <input
+          v-model="sourceUrl"
+          type="url"
+          placeholder="https://example.com/a-recipe"
+          class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+        />
+      </label>
       <div>
         <span class="text-sm font-medium text-ink/80">Tags</span>
         <div class="mt-1 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-white px-3 py-2">
@@ -333,6 +342,7 @@ const recipe = computed(() => recipes.current)
 const title = ref('')
 const description = ref('')
 const durationMinutes = ref(null)
+const sourceUrl = ref('')
 const tags = ref([])
 const tagInput = ref('')
 const groups = ref([])
@@ -370,6 +380,7 @@ function seedFromRecipe(data) {
   title.value = data.title
   description.value = data.description
   durationMinutes.value = data.duration_minutes
+  sourceUrl.value = data.source_url || ''
   tags.value = data.tags.map((tag) => tag.name)
   imageUrl.value = data.image_url
 
@@ -572,6 +583,7 @@ function buildPayload() {
     title: title.value,
     description: description.value,
     duration_minutes: durationMinutes.value,
+    source_url: sourceUrl.value || null,
     tag_names: tags.value,
     recipe_ingredient_groups: [
       ...groups.value.map((g, i) => ({

@@ -29,7 +29,7 @@
         &#8592;
       </button>
 
-      <div class="flex-1 overflow-y-auto px-6 py-8 sm:px-12 sm:py-12">
+      <div ref="scrollRef" class="flex-1 overflow-y-auto px-6 py-8 sm:px-12 sm:py-12">
         <p class="text-sm font-semibold uppercase tracking-wide text-accent-dark">
           Step {{ currentIndex + 1 }} of {{ steps.length }}
         </p>
@@ -39,20 +39,26 @@
           :src="currentStep.image_url"
           alt=""
           class="mt-4 max-h-64 w-full max-w-3xl rounded-xl bg-line/20 object-contain sm:max-h-80"
+          @load="fitInstructionText"
         />
 
         <ul v-if="currentStepIngredients.length" class="mt-4 space-y-1.5">
-          <li
-            v-for="ri in currentStepIngredients"
-            :key="ri.id"
-            class="flex gap-2 text-lg text-ink/85"
-          >
-            <span class="text-accent">&bull;</span>
-            <span>{{ ingredientLabel(ri) }}<span v-if="ri.preparation">, {{ ri.preparation }}</span></span>
+          <li v-for="ri in currentStepIngredients" :key="ri.id">
+            <label class="flex cursor-pointer items-start gap-2 text-lg text-ink/85">
+              <input
+                type="checkbox"
+                class="mt-1.5 h-5 w-5 shrink-0 accent-accent"
+                :checked="checkedIngredientIds.has(ri.id)"
+                @change="toggleChecked(ri.id)"
+              />
+              <span :class="{ 'text-ink/40 line-through': checkedIngredientIds.has(ri.id) }">
+                {{ ingredientLabel(ri) }}<span v-if="ri.preparation">, {{ ri.preparation }}</span>
+              </span>
+            </label>
           </li>
         </ul>
 
-        <p class="mt-6 max-w-3xl text-2xl leading-relaxed text-ink sm:text-3xl">
+        <p ref="instructionRef" class="mt-6 max-w-3xl text-2xl leading-relaxed text-ink sm:text-3xl">
           {{ currentStep.description }}
         </p>
       </div>
@@ -81,10 +87,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipesStore } from '../stores/recipes'
 import { ingredientsById as buildIngredientsById, stepIngredients as stepIngredientsFor, ingredientLabel } from '../lib/recipeIngredients'
+
+const MIN_INSTRUCTION_FONT_PX = 18
 
 const route = useRoute()
 const router = useRouter()
@@ -93,6 +101,8 @@ const recipes = useRecipesStore()
 const loading = ref(true)
 const error = ref(null)
 const currentIndex = ref(0)
+const scrollRef = ref(null)
+const instructionRef = ref(null)
 let wakeLock = null
 
 const recipe = computed(() => recipes.current)
@@ -103,6 +113,16 @@ const isLast = computed(() => currentIndex.value === steps.value.length - 1)
 
 const ingredientsById = computed(() => recipe.value ? buildIngredientsById(recipe.value) : new Map())
 const currentStepIngredients = computed(() => currentStep.value ? stepIngredientsFor(ingredientsById.value, currentStep.value) : [])
+
+// Prep-checklist state only - not persisted, resets on reload. Keyed by
+// recipe_ingredient id so checking one off stays checked if it reappears
+// in a later step's list.
+const checkedIngredientIds = ref(new Set())
+
+function toggleChecked(id) {
+  if (checkedIngredientIds.value.has(id)) checkedIngredientIds.value.delete(id)
+  else checkedIngredientIds.value.add(id)
+}
 
 function previous() {
   if (!isFirst.value) currentIndex.value -= 1
@@ -134,21 +154,48 @@ function handleVisibilityChange() {
   if (document.visibilityState === 'visible') requestWakeLock()
 }
 
+async function fitInstructionText() {
+  const container = scrollRef.value
+  const text = instructionRef.value
+  if (!container || !text) return
+
+  text.style.fontSize = ''
+  await nextTick()
+
+  let size = parseFloat(getComputedStyle(text).fontSize)
+  while (container.scrollHeight > container.clientHeight && size > MIN_INSTRUCTION_FONT_PX) {
+    size -= 1
+    text.style.fontSize = `${size}px`
+  }
+}
+
+function handleResize() {
+  fitInstructionText()
+}
+
+watch(currentIndex, () => {
+  nextTick(fitInstructionText)
+})
+
 onMounted(async () => {
   if (!recipe.value || String(recipe.value.id) !== route.params.id) {
     const result = await recipes.fetchOne(route.params.id)
     if (!result.ok) error.value = 'Recipe not found'
   }
   loading.value = false
+  await nextTick()
+  fitInstructionText()
 
   requestWakeLock()
   document.addEventListener('visibilitychange', handleVisibilityChange)
   document.addEventListener('keydown', handleKeydown)
+  window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', handleVisibilityChange)
   document.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('resize', handleResize)
   wakeLock?.release()
 })
 </script>

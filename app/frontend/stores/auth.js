@@ -54,6 +54,10 @@ export const useAuthStore = defineStore('auth', {
       return result
     },
 
+    updateUser(partial) {
+      this.user = { ...this.user, ...partial }
+    },
+
     async logout() {
       await fetch('/api/v1/logout', {
         method: 'DELETE',

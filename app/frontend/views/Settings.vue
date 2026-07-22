@@ -21,6 +21,46 @@
   </section>
 
   <section class="mt-8 border-t border-line pt-6">
+    <h2 class="font-display text-lg font-semibold text-sage">Homepage</h2>
+    <p class="mt-1 text-sm text-ink/60">Choose what you see first after logging in.</p>
+
+    <div class="mt-4 inline-flex rounded-full border border-line bg-white p-1">
+      <button
+        v-for="option in homeViewOptions"
+        :key="option.value"
+        type="button"
+        class="rounded-full px-4 py-1.5 text-sm font-medium transition-colors cursor-pointer"
+        :class="auth.user.home_view === option.value ? 'bg-accent text-white' : 'text-ink/70 hover:text-accent'"
+        :aria-pressed="auth.user.home_view === option.value"
+        @click="setHomeView(option.value)"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+    <p v-if="preferencesError" class="mt-3 text-sm text-accent-dark">{{ preferencesError }}</p>
+  </section>
+
+  <section class="mt-8 border-t border-line pt-6">
+    <h2 class="font-display text-lg font-semibold text-sage">Meal categories</h2>
+    <p class="mt-1 text-sm text-ink/60">Hide categories you never use to declutter the planner.</p>
+
+    <div class="mt-4 flex flex-wrap gap-2">
+      <button
+        v-for="option in mealTypeOptions"
+        :key="option.field"
+        type="button"
+        class="rounded-full px-3 py-1 text-sm font-medium transition-colors cursor-pointer"
+        :class="auth.user[option.field] ? 'bg-accent text-white' : 'bg-sage/15 text-ink/70 hover:bg-sage/25'"
+        :aria-pressed="auth.user[option.field]"
+        @click="toggleMealType(option.field)"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+    <p v-if="preferencesError" class="mt-3 text-sm text-accent-dark">{{ preferencesError }}</p>
+  </section>
+
+  <section class="mt-8 border-t border-line pt-6">
     <h2 class="font-display text-lg font-semibold text-sage">Pinned tags</h2>
     <p class="mt-1 text-sm text-ink/60">
       Pinned tags always show in the filter row on the Recipes page, ahead of everything else.
@@ -50,19 +90,62 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useThemeStore } from '../stores/theme'
+import { useAuthStore } from '../stores/auth'
 import { csrfToken } from '../lib/csrf'
 
 const theme = useThemeStore()
+const auth = useAuthStore()
 const themeOptions = [
   { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
+]
+const homeViewOptions = [
+  { value: 'random_recipes', label: 'Recipe ideas' },
+  { value: 'weekly_planner', label: 'This week\'s planner' },
+  { value: 'today', label: "Today's meals" },
+]
+const mealTypeOptions = [
+  { field: 'show_breakfast', label: 'Breakfast' },
+  { field: 'show_lunch', label: 'Lunch' },
+  { field: 'show_dinner', label: 'Dinner' },
+  { field: 'show_snack', label: 'Snack' },
 ]
 
 const loading = ref(true)
 const allTags = ref([])
 const pinnedIds = ref(new Set())
 const saveError = ref(null)
+const preferencesError = ref(null)
+
+async function savePreferences(partial) {
+  const previous = { ...auth.user }
+  auth.updateUser(partial)
+  preferencesError.value = null
+
+  const response = await fetch('/api/v1/user_preferences', {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken(),
+    },
+    body: JSON.stringify(partial),
+  })
+
+  if (!response.ok) {
+    auth.updateUser(previous)
+    preferencesError.value = 'Failed to save. Try again.'
+  }
+}
+
+function setHomeView(value) {
+  savePreferences({ home_view: value })
+}
+
+function toggleMealType(field) {
+  savePreferences({ [field]: !auth.user[field] })
+}
 
 onMounted(async () => {
   try {

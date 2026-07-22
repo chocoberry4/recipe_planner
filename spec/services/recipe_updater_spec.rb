@@ -24,6 +24,15 @@ RSpec.describe RecipeUpdater do
     expect(result.recipe.duration_minutes).to eq(45)
   end
 
+  it "updates source_url" do
+    recipe = create(:recipe)
+
+    result = call(recipe, { source_url: "https://example.com/a-recipe" })
+
+    expect(result).to be_ok
+    expect(result.recipe.source_url).to eq("https://example.com/a-recipe")
+  end
+
   it "rolls back and returns errors when a base field is invalid" do
     recipe = create(:recipe, title: "Original")
 

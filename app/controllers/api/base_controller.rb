@@ -49,4 +49,20 @@ class Api::BaseController < ApplicationController
   def bad_request
     render json: { error: "Bad Request" }, status: :bad_request
   end
+
+  # Shared by AuthController (signup/login/me) and UserPreferencesController
+  # (after an update) so the frontend's auth store always gets the same
+  # shape back, regardless of which endpoint touched the user.
+  def user_json(user)
+    {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      show_breakfast: user.show_breakfast,
+      show_lunch: user.show_lunch,
+      show_dinner: user.show_dinner,
+      show_snack: user.show_snack,
+      home_view: user.home_view
+    }
+  end
 end

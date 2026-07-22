@@ -2,7 +2,7 @@
 
 - **Status**: Accepted
 - **Owner**: Vonnie Voong
-- **Related**: [ADR-0001](../adr/0001-cookie-session-auth.md), [ADR-0002](../adr/0002-postgresql-over-mongodb.md), [ADR-0003](../adr/0003-first-class-ingredient-groups.md), [ADR-0004](../adr/0004-suggest-and-correct-autosort-ux.md), [ADR-0005](../adr/0005-jsonld-first-recipe-import.md), [Design: Recipe Import & Autosort](../design/recipe-import-and-autosort.md)
+- **Related**: [ADR-0001](../adr/0001-cookie-session-auth.md), [ADR-0002](../adr/0002-postgresql-over-mongodb.md), [ADR-0003](../adr/0003-first-class-ingredient-groups.md), [ADR-0004](../adr/0004-suggest-and-correct-autosort-ux.md), [ADR-0005](../adr/0005-jsonld-first-recipe-import.md), [Design: Recipe Import & Autosort](../design/recipe-import-and-autosort.md), [Design: Meal Planning Calendar](../design/meal-planning-calendar.md)
 
 ## Why
 
@@ -41,7 +41,7 @@ Out of scope for Phase 1 (see CLAUDE.md for the full phased vision):
 
 ## Open questions (deferred, not blocking Phase 1 recipe/import work)
 
-- Meal planning calendar data model
-- Tags/categories data model
+- ~~Meal planning calendar data model~~ — resolved, see [Design: Meal Planning Calendar](../design/meal-planning-calendar.md)
+- ~~Tags/categories data model~~ — resolved ad-hoc 2026-07-22, see CLAUDE.md's Development Priorities status log (`Tag`/`RecipeTag`)
 - Dietary restriction / allergen / ingredient preference data model
 - Nutrition + portion scaling approach

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_22_180000) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_23_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -43,6 +43,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_22_180000) do
     t.string "image_url"
     t.index ["recipe_id"], name: "index_instructions_on_recipe_id"
     t.index ["recipe_ingredient_group_id"], name: "index_instructions_on_recipe_ingredient_group_id"
+  end
+
+  create_table "meal_plans", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "recipe_id"
+    t.date "date", null: false
+    t.integer "meal_type", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "label"
+    t.index ["recipe_id"], name: "index_meal_plans_on_recipe_id"
+    t.index ["user_id", "date", "meal_type"], name: "index_meal_plans_on_user_id_and_date_and_meal_type"
+    t.index ["user_id", "date"], name: "index_meal_plans_on_user_id_and_date"
+    t.index ["user_id"], name: "index_meal_plans_on_user_id"
   end
 
   create_table "pantry_items", force: :cascade do |t|
@@ -265,6 +280,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_22_180000) do
     t.string "password_digest"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "show_breakfast", default: true, null: false
+    t.boolean "show_lunch", default: true, null: false
+    t.boolean "show_dinner", default: true, null: false
+    t.boolean "show_snack", default: true, null: false
+    t.integer "home_view", default: 0, null: false
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 
@@ -272,6 +292,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_22_180000) do
   add_foreign_key "instruction_ingredients", "recipe_ingredients"
   add_foreign_key "instructions", "recipe_ingredient_groups"
   add_foreign_key "instructions", "recipes"
+  add_foreign_key "meal_plans", "recipes"
+  add_foreign_key "meal_plans", "users"
   add_foreign_key "pantry_items", "ingredients"
   add_foreign_key "recipe_ingredient_groups", "recipes"
   add_foreign_key "recipe_ingredients", "ingredients"

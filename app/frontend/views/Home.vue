@@ -11,7 +11,45 @@
     <p v-if="!auth.checked" class="mt-8 text-ink/50">Loading...</p>
 
     <div v-else-if="auth.isLoggedIn">
-      <div v-if="ideas.length" class="mt-10 grid gap-4 text-left sm:grid-cols-3">
+      <div v-if="summaryDays.length" class="mt-10 text-left">
+        <div class="flex items-center justify-between">
+          <h2 class="font-display text-lg font-semibold text-ink">
+            {{ auth.user.home_view === 'today' ? "Today's meals" : "This week" }}
+          </h2>
+          <router-link to="/planner" class="text-sm font-medium text-accent hover:text-accent-dark">
+            Open planner &rarr;
+          </router-link>
+        </div>
+
+        <p v-if="plansLoading" class="mt-4 text-ink/50">Loading...</p>
+        <div v-else class="mt-4 grid gap-3" :class="summaryDays.length > 1 ? 'sm:grid-cols-3' : ''">
+          <div
+            v-for="day in summaryDays"
+            :key="toISODate(day)"
+            class="min-w-0 rounded-xl border border-line bg-white p-3 text-left"
+          >
+            <p class="text-xs font-semibold uppercase tracking-wide text-ink/50">{{ weekdayLabel(day) }}</p>
+            <p class="font-display text-base font-semibold text-ink">{{ dayNumberLabel(day) }}</p>
+
+            <div v-for="slot in visibleMealTypesList" :key="slot" class="mt-3">
+              <p class="text-xs font-medium uppercase tracking-wide text-ink/40">{{ slotLabel(slot) }}</p>
+              <ul v-if="plansFor(day, slot).length" class="mt-1 space-y-1">
+                <li
+                  v-for="plan in plansFor(day, slot)"
+                  :key="plan.id"
+                  class="truncate rounded-lg bg-sage/10 px-2 py-1 text-sm text-ink/80"
+                  :class="{ italic: !plan.recipe }"
+                >
+                  {{ plan.recipe ? plan.recipe.title : plan.label }}
+                </li>
+              </ul>
+              <p v-else class="mt-1 text-xs text-ink/30">Nothing planned</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else-if="ideas.length" class="mt-10 grid gap-4 text-left sm:grid-cols-3">
         <router-link
           v-for="recipe in ideas"
           :key="recipe.id"
@@ -59,11 +97,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { useMealPlansStore } from '../stores/mealPlans'
+import { startOfWeek, toISODate, weekDays as weekDaysFn } from '../lib/calendar'
+import { visibleMealTypes, groupPlansBySlot, slotLabel, weekdayLabel, dayNumberLabel } from '../lib/mealPlanSlots'
 
 const auth = useAuthStore()
+const mealPlans = useMealPlansStore()
 const ideas = ref([])
+const plansLoading = ref(true)
 
 const IDEA_COUNT = 9
 
@@ -78,9 +121,33 @@ function sampleRandom(list, count) {
   return copy.slice(0, count)
 }
 
+const visibleMealTypesList = computed(() => visibleMealTypes(auth.user))
+
+// Only "today" and "weekly_planner" (the Settings-configurable homepage
+// modes) show anything here - "random_recipes" (the default) leaves this
+// empty so the existing recipe-ideas grid renders instead.
+const summaryDays = computed(() => {
+  if (auth.user?.home_view === 'today') return [ new Date() ]
+  if (auth.user?.home_view === 'weekly_planner') return weekDaysFn(startOfWeek(new Date()))
+  return []
+})
+
+const plansByKey = computed(() => groupPlansBySlot(mealPlans.items))
+
+function plansFor(day, slot) {
+  return plansByKey.value.get(`${toISODate(day)}|${slot}`) || []
+}
+
 onMounted(async () => {
   if (!auth.checked) await auth.fetchCurrentUser()
   if (!auth.isLoggedIn) return
+
+  if (summaryDays.value.length) {
+    const days = summaryDays.value
+    await mealPlans.fetchRange(toISODate(days[0]), toISODate(days[days.length - 1]))
+    plansLoading.value = false
+    return
+  }
 
   try {
     const response = await fetch('/api/v1/recipes', { credentials: 'include' })

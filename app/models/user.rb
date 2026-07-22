@@ -3,7 +3,10 @@ class User < ApplicationRecord
   validates :email, presence: true, uniqueness: true
   validates :password, presence: true, length: { minimum: 6 }, on: :create
   has_many :recipes
+  has_many :meal_plans, dependent: :destroy
   has_many :shopping_lists
   has_many :tag_pins, dependent: :destroy
   has_many :pinned_tags, through: :tag_pins, source: :tag
+
+  enum :home_view, { random_recipes: 0, weekly_planner: 1, today: 2 }
 end

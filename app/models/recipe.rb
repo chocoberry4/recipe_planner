@@ -6,6 +6,7 @@ class Recipe < ApplicationRecord
   has_many :recipe_ingredient_groups, dependent: :destroy
   has_many :recipe_tags, dependent: :destroy
   has_many :tags, through: :recipe_tags
+  has_many :meal_plans, dependent: :destroy
 
   validates :title, presence: true
   validates :description, presence: true

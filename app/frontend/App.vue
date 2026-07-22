@@ -12,6 +12,9 @@
           </router-link>
 
           <template v-if="auth.isLoggedIn">
+            <router-link to="/planner" class="text-ink/70 hover:text-accent transition-colors">
+              Planner
+            </router-link>
             <router-link to="/settings" class="text-ink/70 hover:text-accent transition-colors">
               Settings
             </router-link>

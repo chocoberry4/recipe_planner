@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/auth'
 const routes = [
   { path: '/', name: "Home", component: () =>  import ('../views/Home.vue') } ,
   { path: '/recipes', name: "Recipes", component: () =>  import ('../views/Recipes.vue'), meta: { requiresAuth: true } } ,
+  { path: '/planner', name: "Planner", component: () => import('../views/Planner.vue'), meta: { requiresAuth: true } },
   { path: '/recipes/import', name: "ImportRecipe", component: () => import('../views/RecipeImport.vue'), meta: { requiresAuth: true } },
   { path: '/recipes/:id', name: "RecipeDetail", component: () => import('../views/RecipeDetail.vue'), meta: { requiresAuth: true } },
   { path: '/recipes/:id/steps', name: "StepMode", component: () => import('../views/StepMode.vue'), meta: { requiresAuth: true } },
