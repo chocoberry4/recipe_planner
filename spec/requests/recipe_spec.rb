@@ -26,6 +26,17 @@ RSpec.describe "Recipes", type: :request do
       body = JSON.parse(response.body)
       expect(body.map { |r| r["id"] }).to contain_exactly(*own_recipes.map(&:id))
     end
+
+    it "serializes duration_minutes on the summary used by the index" do
+      user = create(:user)
+      recipe = create(:recipe, user: user, duration_minutes: 20)
+
+      log_in_as(user)
+      get "/api/v1/recipes"
+
+      body = JSON.parse(response.body)
+      expect(body.find { |r| r["id"] == recipe.id }["duration_minutes"]).to eq(20)
+    end
   end
 
   describe "GET /api/v1/recipes/:id" do

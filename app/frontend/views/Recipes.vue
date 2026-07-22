@@ -22,7 +22,17 @@
         class="w-full rounded-lg border border-line bg-white px-4 py-3 text-base text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 sm:max-w-lg"
       />
 
-      <div v-if="allTags.length" class="flex flex-wrap items-center gap-2">
+      <div v-if="allTags.length || anyQuickRecipes" class="flex flex-wrap items-center gap-2">
+        <button
+          v-if="anyQuickRecipes"
+          type="button"
+          class="rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer"
+          :class="quickOnly ? 'bg-accent text-white' : 'bg-sage/15 text-ink/70 hover:bg-sage/25'"
+          :aria-pressed="quickOnly"
+          @click="quickOnly = !quickOnly"
+        >
+          {{ QUICK_LABEL }}
+        </button>
         <button
           v-for="name in visibleTags"
           :key="name"
@@ -45,7 +55,7 @@
           {{ showAllTags ? 'Show fewer' : `+${hiddenTagCount} more` }}
         </button>
         <button
-          v-if="search || selectedTags.size"
+          v-if="search || selectedTags.size || quickOnly"
           type="button"
           class="text-xs font-medium text-ink/50 hover:text-accent-dark cursor-pointer"
           @click="clearFilters"
@@ -73,7 +83,13 @@
             <p v-if="recipe.description" class="mt-1.5 text-sm text-ink/60 line-clamp-2">
               {{ recipe.description }}
             </p>
-            <ul v-if="recipe.tags.length" class="mt-2 flex flex-wrap gap-1.5">
+            <ul v-if="recipe.tags.length || isQuick(recipe)" class="mt-2 flex flex-wrap gap-1.5">
+              <li
+                v-if="isQuick(recipe)"
+                class="rounded-full bg-sage/15 px-2.5 py-0.5 text-xs font-medium text-ink/70"
+              >
+                {{ QUICK_LABEL }}
+              </li>
               <li
                 v-for="tag in recipe.tags"
                 :key="tag.id"
@@ -110,10 +126,24 @@ const search = ref('')
 const selectedTags = ref(new Set())
 const pinnedTagNames = ref([])
 const showAllTags = ref(false)
+const quickOnly = ref(false)
+
+// Not a real Tag/RecipeTag row - a filter/badge computed straight from
+// duration_minutes, so it never needs to be kept in sync (no stale tag left
+// behind after a recipe's duration changes, no risk of the free-text tag
+// editor colliding with it).
+const QUICK_THRESHOLD_MINUTES = 30
+const QUICK_LABEL = `< ${QUICK_THRESHOLD_MINUTES} min`
 
 function isOwner(recipe) {
   return auth.isLoggedIn && recipe.user_id === auth.user.id
 }
+
+function isQuick(recipe) {
+  return recipe.duration_minutes != null && recipe.duration_minutes < QUICK_THRESHOLD_MINUTES
+}
+
+const anyQuickRecipes = computed(() => recipes.value.some(isQuick))
 
 const allTags = computed(() => {
   const names = new Set()
@@ -146,6 +176,7 @@ function toggleTag(name) {
 function clearFilters() {
   search.value = ''
   selectedTags.value = new Set()
+  quickOnly.value = false
 }
 
 const filteredRecipes = computed(() => {
@@ -159,7 +190,9 @@ const filteredRecipes = computed(() => {
     const recipeTagNames = new Set(recipe.tags.map((tag) => tag.name))
     const matchesTags = [ ...selectedTags.value ].every((name) => recipeTagNames.has(name))
 
-    return matchesSearch && matchesTags
+    const matchesQuick = !quickOnly.value || isQuick(recipe)
+
+    return matchesSearch && matchesTags && matchesQuick
   })
 })
 

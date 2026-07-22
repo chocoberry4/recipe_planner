@@ -7,7 +7,7 @@ module Api
     # query storm. `tags` is the only association touched here - the
     # controller must `.includes(:tags)` or this reintroduces an N+1.
     class RecipeSummarySerializer < ActiveModel::Serializer
-      attributes :id, :title, :description, :image_url, :user_id, :tags, :created_at, :updated_at
+      attributes :id, :title, :description, :image_url, :user_id, :duration_minutes, :tags, :created_at, :updated_at
 
       def tags
         object.tags.sort_by(&:name).map { |tag| { id: tag.id, name: tag.name } }
