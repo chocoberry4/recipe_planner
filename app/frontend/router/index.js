@@ -6,6 +6,7 @@ const routes = [
   { path: '/recipes', name: "Recipes", component: () =>  import ('../views/Recipes.vue'), meta: { requiresAuth: true } } ,
   { path: '/recipes/import', name: "ImportRecipe", component: () => import('../views/RecipeImport.vue'), meta: { requiresAuth: true } },
   { path: '/recipes/:id', name: "RecipeDetail", component: () => import('../views/RecipeDetail.vue'), meta: { requiresAuth: true } },
+  { path: '/recipes/:id/steps', name: "StepMode", component: () => import('../views/StepMode.vue'), meta: { requiresAuth: true } },
   { path: '/recipes/:id/edit', name: "EditRecipe", component: () => import('../views/RecipeReview.vue'), meta: { requiresAuth: true } },
   { path: '/recipes/:id/review', name: "RecipeReview", component: () => import('../views/RecipeReview.vue'), meta: { requiresAuth: true } },
   { path: '/settings', name: "Settings", component: () => import('../views/Settings.vue'), meta: { requiresAuth: true } },

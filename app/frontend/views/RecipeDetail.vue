@@ -24,27 +24,36 @@
         </ul>
       </div>
 
-      <div v-if="isOwner" class="flex shrink-0 gap-2 text-sm">
+      <div class="flex shrink-0 gap-2 text-sm">
         <router-link
           v-if="recipe.instructions.length"
-          :to="`/recipes/${recipe.id}/review`"
-          class="rounded-full border border-line px-3.5 py-1.5 text-ink hover:border-accent hover:text-accent transition-colors"
+          :to="`/recipes/${recipe.id}/steps`"
+          class="rounded-full bg-accent px-3.5 py-1.5 text-white hover:bg-accent-dark transition-colors"
         >
-          Review ingredients
+          Step mode
         </router-link>
-        <router-link
-          :to="`/recipes/${recipe.id}/edit`"
-          class="rounded-full border border-line px-3.5 py-1.5 text-ink hover:border-accent hover:text-accent transition-colors"
-        >
-          Edit
-        </router-link>
-        <button
-          type="button"
-          class="rounded-full border border-line px-3.5 py-1.5 text-ink/70 hover:border-accent-dark hover:text-accent-dark transition-colors cursor-pointer"
-          @click="handleDelete"
-        >
-          Delete
-        </button>
+        <template v-if="isOwner">
+          <router-link
+            v-if="recipe.instructions.length"
+            :to="`/recipes/${recipe.id}/review`"
+            class="rounded-full border border-line px-3.5 py-1.5 text-ink hover:border-accent hover:text-accent transition-colors"
+          >
+            Review ingredients
+          </router-link>
+          <router-link
+            :to="`/recipes/${recipe.id}/edit`"
+            class="rounded-full border border-line px-3.5 py-1.5 text-ink hover:border-accent hover:text-accent transition-colors"
+          >
+            Edit
+          </router-link>
+          <button
+            type="button"
+            class="rounded-full border border-line px-3.5 py-1.5 text-ink/70 hover:border-accent-dark hover:text-accent-dark transition-colors cursor-pointer"
+            @click="handleDelete"
+          >
+            Delete
+          </button>
+        </template>
       </div>
     </div>
 
@@ -110,6 +119,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipesStore } from '../stores/recipes'
 import { useAuthStore } from '../stores/auth'
+import { ingredientsById as buildIngredientsById, stepIngredients as stepIngredientsFor, ingredientLabel } from '../lib/recipeIngredients'
 
 const route = useRoute()
 const router = useRouter()
@@ -121,20 +131,10 @@ const error = ref(null)
 const recipe = computed(() => recipes.current)
 const isOwner = computed(() => auth.isLoggedIn && recipe.value?.user_id === auth.user.id)
 
-const allIngredients = computed(() => {
-  if (!recipe.value) return []
-  const grouped = recipe.value.recipe_ingredient_groups.flatMap((g) => g.recipe_ingredients)
-  return [ ...recipe.value.ingredients, ...grouped ]
-})
-
-const ingredientsById = computed(() => new Map(allIngredients.value.map((ri) => [ ri.id, ri ])))
+const ingredientsById = computed(() => recipe.value ? buildIngredientsById(recipe.value) : new Map())
 
 function stepIngredients(step) {
-  return step.recipe_ingredient_ids.map((id) => ingredientsById.value.get(id)).filter(Boolean)
-}
-
-function ingredientLabel(ri) {
-  return [ ri.quantity, ri.unit, ri.name ].filter(Boolean).join(' ')
+  return stepIngredientsFor(ingredientsById.value, step)
 }
 
 onMounted(async () => {
