@@ -111,6 +111,15 @@
         class="text-accent hover:underline"
       >{{ recipe.source_url }}</a>
     </p>
+
+    <ConfirmDialog
+      :open="showDeleteConfirm"
+      title="Delete this recipe?"
+      message="This can't be undone."
+      confirm-label="Delete"
+      @confirm="confirmDelete"
+      @cancel="showDeleteConfirm = false"
+    />
   </div>
 </template>
 
@@ -120,6 +129,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useRecipesStore } from '../stores/recipes'
 import { useAuthStore } from '../stores/auth'
 import { ingredientsById as buildIngredientsById, stepIngredients as stepIngredientsFor, ingredientLabel } from '../lib/recipeIngredients'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -128,6 +138,7 @@ const auth = useAuthStore()
 
 const loading = ref(true)
 const error = ref(null)
+const showDeleteConfirm = ref(false)
 const recipe = computed(() => recipes.current)
 const isOwner = computed(() => auth.isLoggedIn && recipe.value?.user_id === auth.user.id)
 
@@ -143,9 +154,12 @@ onMounted(async () => {
   loading.value = false
 })
 
-async function handleDelete() {
-  if (!confirm('Delete this recipe?')) return
+function handleDelete() {
+  showDeleteConfirm.value = true
+}
 
+async function confirmDelete() {
+  showDeleteConfirm.value = false
   const result = await recipes.destroy(route.params.id)
   if (result.ok) router.push('/recipes')
 }

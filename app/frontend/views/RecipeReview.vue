@@ -274,6 +274,15 @@
         Delete
       </button>
     </div>
+
+    <ConfirmDialog
+      :open="showDeleteConfirm"
+      title="Delete this recipe?"
+      message="This can't be undone."
+      confirm-label="Delete"
+      @confirm="confirmDelete"
+      @cancel="showDeleteConfirm = false"
+    />
   </div>
 </template>
 
@@ -283,6 +292,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useRecipesStore } from '../stores/recipes'
 import IngredientCombobox from '../components/IngredientCombobox.vue'
 import IngredientRow from '../components/IngredientRow.vue'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -293,6 +303,7 @@ const error = ref(null)
 const saving = ref(false)
 const saveError = ref(null)
 const saveMessage = ref(null)
+const showDeleteConfirm = ref(false)
 const recipe = computed(() => recipes.current)
 
 const title = ref('')
@@ -631,9 +642,12 @@ async function materializeNewIngredients() {
   }
 }
 
-async function handleDelete() {
-  if (!confirm('Delete this recipe?')) return
+function handleDelete() {
+  showDeleteConfirm.value = true
+}
 
+async function confirmDelete() {
+  showDeleteConfirm.value = false
   const result = await recipes.destroy(route.params.id)
   if (result.ok) router.push('/recipes')
 }
