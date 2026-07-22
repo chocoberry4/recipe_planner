@@ -12,7 +12,9 @@
     <div class="mt-6 flex items-start justify-between gap-4">
       <div>
         <h1 class="font-display text-3xl font-semibold text-ink">{{ recipe.title }}</h1>
-        <p v-if="formattedDuration" class="mt-1 text-sm font-medium text-ink/50">{{ formattedDuration }}</p>
+        <p v-if="formattedDuration" class="mt-1 text-sm font-medium text-ink/50">
+          {{ formattedDuration }}<span v-if="finishTime"> &middot; Finish by {{ finishTime }}</span>
+        </p>
         <p v-if="recipe.description" class="mt-2 text-ink/60">{{ recipe.description }}</p>
         <ul v-if="recipe.tags.length" class="mt-3 flex flex-wrap gap-2">
           <li
@@ -164,6 +166,16 @@ const formattedDuration = computed(() => {
   if (hours && remainder) return `${hours} hr ${remainder} min`
   if (hours) return `${hours} hr`
   return `${remainder} min`
+})
+
+// Computed once per view (not a live-updating clock) - based on the system
+// time when the recipe finishes loading, plus its duration.
+const finishTime = computed(() => {
+  const minutes = recipe.value?.duration_minutes
+  if (!minutes) return null
+
+  const finish = new Date(Date.now() + minutes * 60 * 1000)
+  return finish.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
 })
 
 onMounted(async () => {
