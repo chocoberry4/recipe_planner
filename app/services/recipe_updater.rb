@@ -119,6 +119,7 @@ class RecipeUpdater
       shared = {
         description: attrs[:description],
         step_number: attrs[:step_number],
+        image_url: attrs[:image_url],
         recipe_ingredient_group_id: attrs[:recipe_ingredient_group_id]
       }
 

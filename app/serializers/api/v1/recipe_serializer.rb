@@ -46,6 +46,7 @@ module Api
             step_number: instruction.step_number,
             description: instruction.description,
             duration_minutes: instruction.duration_minutes,
+            image_url: instruction.image_url,
             recipe_ingredient_group_id: instruction.recipe_ingredient_group_id,
             recipe_ingredient_ids: instruction.instruction_ingredients.sort_by(&:id).map(&:recipe_ingredient_id)
           }

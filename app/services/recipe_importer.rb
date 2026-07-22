@@ -165,7 +165,7 @@ class RecipeImporter
     instructions.each_with_index do |entry, index|
       group = entry.group_name.presence && (groups[entry.group_name] ||= recipe.recipe_ingredient_groups.create!(name: entry.group_name, position: groups.size + 1))
 
-      recipe.instructions.create!(step_number: index + 1, description: entry.text, recipe_ingredient_group: group)
+      recipe.instructions.create!(step_number: index + 1, description: entry.text, image_url: entry.image_url, recipe_ingredient_group: group)
     end
   end
   private_class_method :create_instructions

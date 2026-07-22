@@ -210,6 +210,21 @@
           </div>
         </div>
 
+        <div class="mt-3 ml-9 flex items-center gap-3">
+          <img
+            v-if="instruction.image_url"
+            :src="instruction.image_url"
+            alt=""
+            class="h-16 w-16 shrink-0 rounded-lg bg-line/20 object-cover"
+          />
+          <input
+            v-model="instruction.image_url"
+            type="text"
+            placeholder="Step image URL (optional)"
+            class="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+          />
+        </div>
+
         <IngredientCombobox
           v-if="instruction.id"
           :options="unresolvedOptions"
@@ -362,6 +377,7 @@ function seedFromRecipe(data) {
     _key: String(ins.id),
     id: ins.id,
     description: ins.description,
+    image_url: ins.image_url,
     recipe_ingredient_group_id: ins.recipe_ingredient_group_id
   }))
 
@@ -465,7 +481,7 @@ function removeIngredient(key) {
 }
 
 function addInstruction() {
-  instructions.value.push({ _key: nextKey(), id: null, description: '', recipe_ingredient_group_id: null })
+  instructions.value.push({ _key: nextKey(), id: null, description: '', image_url: null, recipe_ingredient_group_id: null })
 }
 
 function removeInstruction(key) {
@@ -563,6 +579,7 @@ function buildPayload() {
         id: ins.id,
         description: ins.description,
         step_number: i + 1,
+        image_url: ins.image_url,
         recipe_ingredient_group_id: ins.recipe_ingredient_group_id
       })),
       ...removedInstructionIds.value.map((id) => ({ id, _destroy: true }))

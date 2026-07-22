@@ -66,7 +66,7 @@ module Api
             recipe_ingredients: [ :id, :name, :quantity, :unit, :preparation, :position, :_destroy ]
           ],
           ingredients: [ :id, :name, :quantity, :unit, :preparation, :position, :_destroy ],
-          instructions: [ :id, :description, :step_number, :recipe_ingredient_group_id, :_destroy ],
+          instructions: [ :id, :description, :step_number, :image_url, :recipe_ingredient_group_id, :_destroy ],
           tag_names: []
         )
       end

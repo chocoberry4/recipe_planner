@@ -83,6 +83,18 @@ RSpec.describe "Recipes", type: :request do
       expect(body["ingredients"].map { |i| i["id"] }).to include(unresolved_ri.id)
     end
 
+    it "serializes each instruction's image_url" do
+      recipe = create(:recipe)
+      log_in_as(recipe.user)
+      step = create(:instruction, recipe: recipe, image_url: "https://example.com/step.jpg")
+
+      get "/api/v1/recipes/#{recipe.id}"
+
+      body = JSON.parse(response.body)
+      step_json = body["instructions"].find { |i| i["id"] == step.id }
+      expect(step_json["image_url"]).to eq("https://example.com/step.jpg")
+    end
+
     it "returns not_found for a missing recipe" do
       log_in_as(create(:user))
 
@@ -183,6 +195,19 @@ RSpec.describe "Recipes", type: :request do
       expect(RecipeIngredient.exists?(remove.id)).to be false
       expect(step.reload.description).to eq("New step")
       expect(body["ingredients"].map { |i| i["name"] }).to include("garlic")
+    end
+
+    it "updates an instruction's image_url" do
+      recipe = create(:recipe)
+      log_in_as(recipe.user)
+      step = create(:instruction, recipe: recipe, description: "Whisk the eggs.")
+
+      patch "/api/v1/recipes/#{recipe.id}", params: {
+        recipe: { instructions: [ { id: step.id, description: step.description, image_url: "https://example.com/step.jpg" } ] }
+      }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(step.reload.image_url).to eq("https://example.com/step.jpg")
     end
   end
 

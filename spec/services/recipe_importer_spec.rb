@@ -51,6 +51,26 @@ RSpec.describe RecipeImporter do
       expect(egg_step.recipe_ingredients.map { |ri| ri.ingredient.name }).to include("eggs")
     end
 
+    it "persists each step's own image when the source's JSON-LD provides one" do
+      user = create(:user)
+      html = html_with_json_ld(
+        "@type" => "Recipe",
+        "name" => "Tacos",
+        "recipeIngredient" => [ "2 eggs" ],
+        "recipeInstructions" => [
+          { "@type" => "HowToStep", "text" => "Whisk the eggs.", "image" => "https://example.com/step1.jpg" },
+          { "@type" => "HowToStep", "text" => "Serve." }
+        ]
+      )
+      allow(described_class).to receive(:fetch_html).and_return(html)
+
+      result = described_class.from_url("https://example.com/tacos", user: user)
+
+      expect(result).to be_ok
+      expect(result.recipe.instructions.find_by(description: "Whisk the eggs.").image_url).to eq("https://example.com/step1.jpg")
+      expect(result.recipe.instructions.find_by(description: "Serve.").image_url).to be_nil
+    end
+
     it "strips checkbox glyphs baked directly into a site's JSON-LD recipeIngredient text" do
       user = create(:user)
       html = html_with_json_ld(

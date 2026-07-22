@@ -34,6 +34,13 @@
           Step {{ currentIndex + 1 }} of {{ steps.length }}
         </p>
 
+        <img
+          v-if="currentStep.image_url"
+          :src="currentStep.image_url"
+          alt=""
+          class="mt-4 max-h-64 w-full max-w-3xl rounded-xl bg-line/20 object-contain sm:max-h-80"
+        />
+
         <ul v-if="currentStepIngredients.length" class="mt-4 space-y-1.5">
           <li
             v-for="ri in currentStepIngredients"

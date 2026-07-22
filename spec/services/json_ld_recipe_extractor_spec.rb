@@ -73,6 +73,46 @@ RSpec.describe JsonLdRecipeExtractor do
     )
   end
 
+  it "extracts a HowToStep's own image, in either string or ImageObject form" do
+    html = html_with_json_ld(
+      "@type" => "Recipe",
+      "name" => "Tacos",
+      "recipeIngredient" => [],
+      "recipeInstructions" => [
+        { "@type" => "HowToStep", "text" => "Whisk the eggs.", "image" => "https://example.com/step1.jpg" },
+        { "@type" => "HowToStep", "text" => "Add the flour.", "image" => { "@type" => "ImageObject", "url" => "https://example.com/step2.jpg" } },
+        { "@type" => "HowToStep", "text" => "Serve." }
+      ]
+    )
+
+    result = described_class.extract(html)
+
+    expect(result.instructions.map(&:image_url)).to eq(
+      [ "https://example.com/step1.jpg", "https://example.com/step2.jpg", nil ]
+    )
+  end
+
+  it "extracts step images for steps nested inside a HowToSection" do
+    html = html_with_json_ld(
+      "@type" => "Recipe",
+      "name" => "Tacos",
+      "recipeIngredient" => [],
+      "recipeInstructions" => [
+        {
+          "@type" => "HowToSection",
+          "name" => "Marinade",
+          "itemListElement" => [
+            { "@type" => "HowToStep", "text" => "Whisk soy sauce with garlic.", "image" => "https://example.com/marinade.jpg" }
+          ]
+        }
+      ]
+    )
+
+    result = described_class.extract(html)
+
+    expect(result.instructions.first.image_url).to eq("https://example.com/marinade.jpg")
+  end
+
   it "unwraps an @graph array to find the Recipe node" do
     html = html_with_json_ld(
       "@context" => "https://schema.org",

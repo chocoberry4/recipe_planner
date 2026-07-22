@@ -258,5 +258,17 @@ RSpec.describe RecipeUpdater do
       expect(result).to be_ok
       expect(Instruction.exists?(step.id)).to be false
     end
+
+    it "sets an instruction's image_url" do
+      recipe = create(:recipe)
+      step = create(:instruction, recipe: recipe, description: "Whisk the eggs.")
+
+      result = call(recipe, {
+        instructions: [ { id: step.id, description: step.description, image_url: "https://example.com/step.jpg" } ]
+      })
+
+      expect(result).to be_ok
+      expect(step.reload.image_url).to eq("https://example.com/step.jpg")
+    end
   end
 end

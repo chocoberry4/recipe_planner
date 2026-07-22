@@ -97,6 +97,12 @@
               {{ stepIngredients(step).map(ingredientLabel).join(', ') }}
             </p>
             <span class="text-ink/85">{{ step.description }}</span>
+            <img
+              v-if="step.image_url"
+              :src="step.image_url"
+              alt=""
+              class="mt-2 max-h-48 rounded-lg bg-line/20 object-contain"
+            />
           </div>
         </li>
       </ol>

@@ -4,7 +4,7 @@
 # to fall back to manual paste.
 class JsonLdRecipeExtractor
   Result = Struct.new(:title, :description, :ingredient_lines, :instructions, :image_urls, keyword_init: true)
-  InstructionEntry = Struct.new(:text, :group_name, keyword_init: true)
+  InstructionEntry = Struct.new(:text, :group_name, :image_url, keyword_init: true)
 
   # A row of candidate images is meant to be a handful of options to pick
   # from, not every image a page links - caps how many `image` entries get
@@ -110,12 +110,21 @@ class JsonLdRecipeExtractor
   def extract_section(section)
     Array(section["itemListElement"]).filter_map do |step|
       text = clean_text(step.is_a?(Hash) ? step["text"] : step)
-      InstructionEntry.new(text: text, group_name: clean_text(section["name"]).presence) if text.present?
+      next unless text.present?
+
+      InstructionEntry.new(text: text, group_name: clean_text(section["name"]).presence, image_url: step_image(step))
     end
   end
 
   def extract_step(step)
     text = clean_text(step["text"])
-    text.present? ? [ InstructionEntry.new(text: text, group_name: nil) ] : []
+    text.present? ? [ InstructionEntry.new(text: text, group_name: nil, image_url: step_image(step)) ] : []
+  end
+
+  # A HowToStep's own `image` is the same polymorphic shape as the recipe-level
+  # `image` (see extract_images above) - reused here and just take the first
+  # match, since a single step only gets one photo.
+  def step_image(step)
+    extract_images(step.is_a?(Hash) ? step["image"] : nil).first
   end
 end
