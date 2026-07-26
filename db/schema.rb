@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_26_144839) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_26_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -302,6 +302,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_26_144839) do
     t.index ["name"], name: "index_tags_on_name", unique: true
   end
 
+  create_table "tandoor_imports", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.integer "status", default: 0, null: false
+    t.integer "total_recipes"
+    t.integer "processed_recipes", default: 0, null: false
+    t.jsonb "recipe_ids", default: [], null: false
+    t.jsonb "import_errors", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_tandoor_imports_on_user_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "username"
     t.string "email"
@@ -313,6 +325,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_26_144839) do
     t.boolean "show_dinner", default: true, null: false
     t.boolean "show_snack", default: true, null: false
     t.integer "home_view", default: 0, null: false
+    t.boolean "tandoor_import_enabled", default: false, null: false
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 
@@ -343,4 +356,5 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_26_144839) do
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "tag_pins", "tags"
   add_foreign_key "tag_pins", "users"
+  add_foreign_key "tandoor_imports", "users"
 end

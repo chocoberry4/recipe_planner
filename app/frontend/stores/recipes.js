@@ -58,6 +58,47 @@ export const useRecipesStore = defineStore('recipes', {
       return importRecipe({ title, description, ingredients_text, instructions_text })
     },
 
+    // A Tandoor export .zip - either a single recipe (recipe.json + an image
+    // at the top level) or a bulk export (one <id>.zip per recipe) - see
+    // TandoorImporter. A bulk export can hold hundreds of recipes with
+    // images, too slow to process within one request, so this only kicks
+    // off a TandoorImportJob and hands back its id - poll fetchTandoorImport
+    // for progress and the eventual { recipes, errors } result.
+    async importFromTandoorZip(file) {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      // A large multipart upload is more exposed to a transient network blip
+      // than the app's other small JSON requests - if fetch itself rejects
+      // (rather than resolving with a non-ok response), the caller's
+      // `submitting` flag must still get reset instead of hanging forever
+      // on an unhandled rejection, so this catches and reports it explicitly.
+      try {
+        const response = await fetch('/api/v1/tandoor_imports', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'X-CSRF-Token': csrfToken() },
+          body: formData,
+        })
+        const body = await response.json().catch(() => ({}))
+
+        if (response.ok) return { ok: true, importId: body.id }
+        return { ok: false, errors: body.errors || [ 'Something went wrong' ] }
+      } catch {
+        return { ok: false, errors: [ 'Upload failed - check your connection and try again.' ] }
+      }
+    },
+
+    async fetchTandoorImport(importId) {
+      try {
+        const response = await fetch(`/api/v1/tandoor_imports/${importId}`, { credentials: 'include' })
+        if (!response.ok) return { ok: false }
+        return { ok: true, status: await response.json() }
+      } catch {
+        return { ok: false }
+      }
+    },
+
     async uploadImage(recipeId, file) {
       const formData = new FormData()
       formData.append('image', file)

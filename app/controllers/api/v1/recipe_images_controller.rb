@@ -9,9 +9,6 @@ module Api
     class RecipeImagesController < Api::BaseController
       before_action :require_login
 
-      ALLOWED_CONTENT_TYPES = %w[image/jpeg image/png image/webp image/gif].freeze
-      MAX_BYTES = 5.megabytes
-
       def create
         recipe = current_user.recipes.find(params[:recipe_id])
         file = params[:image]
@@ -20,11 +17,11 @@ module Api
           return render json: { errors: [ "No image file was uploaded" ] }, status: :unprocessable_entity
         end
 
-        unless ALLOWED_CONTENT_TYPES.include?(file.content_type)
+        unless Recipe::ALLOWED_IMAGE_CONTENT_TYPES.include?(file.content_type)
           return render json: { errors: [ "Image must be a JPEG, PNG, WEBP, or GIF" ] }, status: :unprocessable_entity
         end
 
-        if file.size > MAX_BYTES
+        if file.size > Recipe::MAX_IMAGE_BYTES
           return render json: { errors: [ "Image must be smaller than 5MB" ] }, status: :unprocessable_entity
         end
 

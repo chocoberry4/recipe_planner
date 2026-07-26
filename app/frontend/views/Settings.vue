@@ -61,6 +61,26 @@
   </section>
 
   <section class="mt-8 border-t border-line pt-6">
+    <h2 class="font-display text-lg font-semibold text-sage">Import</h2>
+    <p class="mt-1 text-sm text-ink/60">
+      Enable importing recipes directly from a Tandoor Recipes export.
+    </p>
+
+    <div class="mt-4 inline-flex rounded-full border border-line bg-white p-1">
+      <button
+        type="button"
+        class="rounded-full px-4 py-1.5 text-sm font-medium transition-colors cursor-pointer"
+        :class="auth.user.tandoor_import_enabled ? 'bg-accent text-white' : 'text-ink/70 hover:text-accent'"
+        :aria-pressed="auth.user.tandoor_import_enabled"
+        @click="toggleTandoorImport"
+      >
+        {{ auth.user.tandoor_import_enabled ? 'Enabled' : 'Disabled' }}
+      </button>
+    </div>
+    <p v-if="preferencesError" class="mt-3 text-sm text-accent-dark">{{ preferencesError }}</p>
+  </section>
+
+  <section class="mt-8 border-t border-line pt-6">
     <h2 class="font-display text-lg font-semibold text-sage">Pinned tags</h2>
     <p class="mt-1 text-sm text-ink/60">
       Pinned tags always show in the filter row on the Recipes page, ahead of everything else.
@@ -145,6 +165,10 @@ function setHomeView(value) {
 
 function toggleMealType(field) {
   savePreferences({ [field]: !auth.user[field] })
+}
+
+function toggleTandoorImport() {
+  savePreferences({ tandoor_import_enabled: !auth.user.tandoor_import_enabled })
 }
 
 onMounted(async () => {

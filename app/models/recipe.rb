@@ -14,6 +14,11 @@ class Recipe < ApplicationRecord
   # RecipeUpdater/RecipeImagesController for how setting one clears the other.
   has_one_attached :image
 
+  # Shared by every path that can attach a file to `image` - RecipeImagesController
+  # (a direct upload) and TandoorImporter (an image bundled in an imported .zip).
+  ALLOWED_IMAGE_CONTENT_TYPES = %w[image/jpeg image/png image/webp image/gif].freeze
+  MAX_IMAGE_BYTES = 5.megabytes
+
   # An uploaded/imported image is often a full-resolution photo (seen well
   # over 1MB) - serving that untouched into a 64px list thumbnail or a 384px
   # detail-page hero was the main cause of slow image loads. These two sizes
