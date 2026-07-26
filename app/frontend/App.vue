@@ -3,7 +3,7 @@
     <header class="sticky top-0 z-10 border-b border-line bg-cream/90 backdrop-blur">
       <nav class="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
         <router-link to="/" class="font-display text-xl font-semibold tracking-tight">
-          Recipe Planner
+          Dishio
         </router-link>
 
         <div class="flex items-center gap-5 text-sm">

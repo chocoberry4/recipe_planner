@@ -1,4 +1,4 @@
-# Recipe Planner
+# Dishio
 
 An easy to use meal planner, pantry tracker, recipe library all in one. I would love to expand this to be community based to share ideas, recipes and just chat amongst one another.
 
