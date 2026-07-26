@@ -3,7 +3,7 @@
 
   <section class="mt-8 border-t border-line pt-6">
     <h2 class="font-display text-lg font-semibold text-sage">Appearance</h2>
-    <p class="mt-1 text-sm text-ink/60">Choose how Dishio looks on this device.</p>
+    <p class="mt-1 text-sm text-ink/60">Choose how Plate.it looks on this device.</p>
 
     <div class="mt-4 inline-flex rounded-full border border-line bg-white p-1">
       <button
