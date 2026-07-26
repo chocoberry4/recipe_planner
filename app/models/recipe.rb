@@ -14,6 +14,11 @@ class Recipe < ApplicationRecord
   # RecipeUpdater/RecipeImagesController for how setting one clears the other.
   has_one_attached :image
 
+  # Shared by every path that can attach a file to `image` - RecipeImagesController
+  # (a direct upload) and TandoorImporter (an image bundled in an imported .zip).
+  ALLOWED_IMAGE_CONTENT_TYPES = %w[image/jpeg image/png image/webp image/gif].freeze
+  MAX_IMAGE_BYTES = 5.megabytes
+
   validates :title, presence: true
   validates :description, presence: true
 end

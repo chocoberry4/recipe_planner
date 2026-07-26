@@ -11,6 +11,7 @@ Rails.application.routes.draw do
       resources :meal_plans, only: %i[index create update destroy]
       resource :pinned_tags, only: %i[show update]
       resource :user_preferences, only: %i[show update]
+      resources :tandoor_imports, only: %i[create show]
 
       post "recipes/import", to: "recipe_imports#create"
 

@@ -10,6 +10,7 @@ gem "bootsnap", require: false
 gem "pg", "~> 1.6"
 gem "puma", ">= 5.0"
 gem "rack-cors"
+gem "rubyzip", "~> 2.3", require: "zip"
 gem "rubocop", require: false
 gem "solid_cache"
 gem "solid_queue"
