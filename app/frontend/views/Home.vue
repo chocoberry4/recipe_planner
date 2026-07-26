@@ -40,7 +40,10 @@
                   class="truncate rounded-lg bg-sage/10 px-2 py-1 text-sm text-ink/80"
                   :class="{ italic: !plan.recipe }"
                 >
-                  {{ plan.recipe ? plan.recipe.title : plan.label }}
+                  <router-link v-if="plan.recipe" :to="`/recipes/${plan.recipe.id}`" class="hover:text-accent-dark hover:underline">
+                    {{ plan.recipe.title }}
+                  </router-link>
+                  <template v-else>{{ plan.label }}</template>
                 </li>
               </ul>
               <p v-else class="mt-1 text-xs text-ink/30">Nothing planned</p>
