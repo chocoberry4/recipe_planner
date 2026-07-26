@@ -112,7 +112,7 @@
       </li>
     </ul>
 
-    <div v-if="totalPages > 1" class="mt-6 flex items-center justify-center gap-3">
+    <div v-if="totalPages > 1" class="mt-6 flex items-center justify-center gap-1.5">
       <button
         type="button"
         class="rounded-full border border-line px-3 py-1 text-xs font-medium text-ink hover:border-accent-dark hover:text-accent-dark transition-colors disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
@@ -121,7 +121,23 @@
       >
         &#8592; Previous
       </button>
-      <span class="text-xs text-ink/50">Page {{ currentPage }} of {{ totalPages }}</span>
+
+      <template v-for="(page, index) in pageNumbers" :key="index">
+        <span v-if="page === '...'" class="px-1 text-xs text-ink/40">…</span>
+        <button
+          v-else
+          type="button"
+          class="h-7 w-7 rounded-full text-xs font-medium transition-colors cursor-pointer"
+          :class="page === currentPage
+            ? 'bg-accent text-white'
+            : 'border border-line text-ink hover:border-accent-dark hover:text-accent-dark'"
+          :aria-current="page === currentPage ? 'page' : undefined"
+          @click="currentPage = page"
+        >
+          {{ page }}
+        </button>
+      </template>
+
       <button
         type="button"
         class="rounded-full border border-line px-3 py-1 text-xs font-medium text-ink hover:border-accent-dark hover:text-accent-dark transition-colors disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
@@ -221,6 +237,23 @@ const filteredRecipes = computed(() => {
 })
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredRecipes.value.length / PAGE_SIZE)))
+
+// Always shows page 1, the last page, and a window around the current page,
+// collapsing everything else into a single "..." so a large collection
+// doesn't turn this into a wall of buttons.
+const pageNumbers = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  const windowStart = Math.max(2, current - 1)
+  const windowEnd = Math.min(total - 1, current + 1)
+
+  const pages = [ 1 ]
+  if (windowStart > 2) pages.push('...')
+  for (let page = windowStart; page <= windowEnd; page++) pages.push(page)
+  if (windowEnd < total - 1) pages.push('...')
+  if (total > 1) pages.push(total)
+  return pages
+})
 
 const pagedRecipes = computed(() => {
   const start = (currentPage.value - 1) * PAGE_SIZE
