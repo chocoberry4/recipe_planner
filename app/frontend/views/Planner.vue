@@ -60,23 +60,32 @@
             @dragstart="handleDragStart(plan)"
             @dragend="handleDragEnd"
           >
-            <span class="min-w-0 truncate" :class="{ italic: !plan.recipe }">{{ plan.recipe ? plan.recipe.title : plan.label }}</span>
+            <router-link
+              v-if="plan.recipe"
+              :to="`/recipes/${plan.recipe.id}`"
+              class="min-w-0 truncate hover:text-accent-dark hover:underline"
+            >
+              {{ plan.recipe.title }}
+            </router-link>
+            <span v-else class="min-w-0 truncate italic">{{ plan.label }}</span>
             <span class="flex shrink-0 items-center gap-2">
               <router-link
                 v-if="!plan.recipe"
                 :to="{ path: '/recipes/import', query: { title: plan.label, mealPlanId: plan.id } }"
-                class="text-xs font-medium text-ink/40 hover:text-accent-dark"
+                class="rounded-full border border-ink/15 px-2 py-0.5 text-xs font-medium text-ink/40 hover:border-accent-dark hover:bg-accent-soft hover:text-accent-dark transition-colors"
                 title="Create or import a recipe for this"
               >
                 Add
               </router-link>
               <button
                 type="button"
-                class="text-ink/30 hover:text-accent-dark cursor-pointer"
+                class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-ink/15 text-ink/40 hover:border-accent-dark hover:bg-accent-soft hover:text-accent-dark cursor-pointer transition-colors"
                 aria-label="Remove"
                 @click="removePlan(plan)"
               >
-                &times;
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="h-3 w-3">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
               </button>
             </span>
           </li>
