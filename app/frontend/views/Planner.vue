@@ -111,9 +111,19 @@
       <span class="text-sm font-medium" :class="{ 'rounded-full bg-accent px-1.5 text-white': isToday(day) }">
         {{ day.getDate() }}
       </span>
-      <span v-if="countFor(day) > 0" class="rounded-full bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent-dark">
-        {{ countFor(day) }} planned
-      </span>
+      <div v-if="plansForDay(day).length" class="w-full space-y-0.5">
+        <p
+          v-for="plan in plansForDay(day).slice(0, MAX_MONTH_CELL_PLANS)"
+          :key="plan.id"
+          class="w-full truncate text-[11px] leading-tight text-ink/70"
+          :class="{ italic: !plan.recipe }"
+        >
+          {{ plan.recipe ? plan.recipe.title : plan.label }}
+        </p>
+        <p v-if="plansForDay(day).length > MAX_MONTH_CELL_PLANS" class="text-[11px] leading-tight text-ink/40">
+          +{{ plansForDay(day).length - MAX_MONTH_CELL_PLANS }} more
+        </p>
+      </div>
     </button>
   </div>
 </template>
@@ -163,21 +173,32 @@ const recipeOptions = computed(() =>
 
 const plansByKey = computed(() => groupPlansBySlot(mealPlans.items))
 
-const countByDate = computed(() => {
-  const counts = {}
+// The month grid shows dish names directly rather than just a count, so a
+// day's plans need to be ordered meal-type-first (not raw API/array order)
+// for that list to read naturally - same idea as groupPlansBySlot but keyed
+// by date alone since a month cell isn't broken out by slot.
+const MEAL_TYPE_ORDER = [ 'breakfast', 'lunch', 'dinner', 'snack' ]
+const MAX_MONTH_CELL_PLANS = 3
+
+const plansByDate = computed(() => {
+  const map = new Map()
   for (const plan of mealPlans.items) {
     if (!MEAL_TYPES.value.includes(plan.meal_type)) continue
-    counts[plan.date] = (counts[plan.date] || 0) + 1
+    if (!map.has(plan.date)) map.set(plan.date, [])
+    map.get(plan.date).push(plan)
   }
-  return counts
+  for (const list of map.values()) {
+    list.sort((a, b) => MEAL_TYPE_ORDER.indexOf(a.meal_type) - MEAL_TYPE_ORDER.indexOf(b.meal_type) || a.position - b.position)
+  }
+  return map
 })
 
 function plansFor(day, slot) {
   return plansByKey.value.get(`${toISODate(day)}|${slot}`) || []
 }
 
-function countFor(day) {
-  return countByDate.value[toISODate(day)] || 0
+function plansForDay(day) {
+  return plansByDate.value.get(toISODate(day)) || []
 }
 
 function isToday(day) {
