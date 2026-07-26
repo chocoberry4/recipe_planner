@@ -67,7 +67,7 @@
 
     <p v-if="filteredRecipes.length === 0" class="mt-8 text-ink/50">No recipes match your filters.</p>
     <ul v-else class="mt-6 grid gap-4 sm:grid-cols-2">
-      <li v-for="recipe in filteredRecipes" :key="recipe.id" class="group relative">
+      <li v-for="recipe in pagedRecipes" :key="recipe.id" class="group relative">
         <router-link
           :to="`/recipes/${recipe.id}`"
           class="flex h-full gap-4 rounded-xl border border-line bg-white p-5 hover:border-accent hover:shadow-sm transition"
@@ -110,11 +110,31 @@
         </router-link>
       </li>
     </ul>
+
+    <div v-if="totalPages > 1" class="mt-6 flex items-center justify-center gap-3">
+      <button
+        type="button"
+        class="rounded-full border border-line px-3 py-1 text-xs font-medium text-ink hover:border-accent-dark hover:text-accent-dark transition-colors disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+        :disabled="currentPage === 1"
+        @click="currentPage--"
+      >
+        &#8592; Previous
+      </button>
+      <span class="text-xs text-ink/50">Page {{ currentPage }} of {{ totalPages }}</span>
+      <button
+        type="button"
+        class="rounded-full border border-line px-3 py-1 text-xs font-medium text-ink hover:border-accent-dark hover:text-accent-dark transition-colors disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+        :disabled="currentPage === totalPages"
+        @click="currentPage++"
+      >
+        Next &#8594;
+      </button>
+    </div>
   </template>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
@@ -127,6 +147,9 @@ const selectedTags = ref(new Set())
 const pinnedTagNames = ref([])
 const showAllTags = ref(false)
 const quickOnly = ref(false)
+const currentPage = ref(1)
+
+const PAGE_SIZE = 12
 
 // Not a real Tag/RecipeTag row - a filter/badge computed straight from
 // duration_minutes, so it never needs to be kept in sync (no stale tag left
@@ -194,6 +217,19 @@ const filteredRecipes = computed(() => {
 
     return matchesSearch && matchesTags && matchesQuick
   })
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredRecipes.value.length / PAGE_SIZE)))
+
+const pagedRecipes = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return filteredRecipes.value.slice(start, start + PAGE_SIZE)
+})
+
+// A page number from before a search/tag/quick change stops making sense
+// once the filtered set has shrunk or grown out from under it.
+watch([ search, selectedTags, quickOnly ], () => {
+  currentPage.value = 1
 })
 
 onMounted(async () => {

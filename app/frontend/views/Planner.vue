@@ -84,6 +84,7 @@
         <RecipePicker
           class="mt-1"
           :options="recipeOptions"
+          :meal-type="slot"
           @select="(recipeId) => addPlan(day, slot, { recipeId })"
           @add-text="(label) => addPlan(day, slot, { label })"
         />
@@ -156,7 +157,7 @@ const headerLabel = computed(() =>
 
 const recipeOptions = computed(() =>
   allRecipes.value
-    .map((r) => ({ id: r.id, label: r.title, tags: r.tags.map((tag) => tag.name) }))
+    .map((r) => ({ id: r.id, label: r.title, tags: r.tags.map((tag) => tag.name), image: r.image_url }))
     .sort((a, b) => a.label.localeCompare(b.label))
 )
 
