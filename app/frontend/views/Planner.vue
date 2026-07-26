@@ -156,7 +156,7 @@ const headerLabel = computed(() =>
 
 const recipeOptions = computed(() =>
   allRecipes.value
-    .map((r) => ({ id: r.id, label: r.title }))
+    .map((r) => ({ id: r.id, label: r.title, tags: r.tags.map((tag) => tag.name) }))
     .sort((a, b) => a.label.localeCompare(b.label))
 )
 

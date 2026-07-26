@@ -19,6 +19,29 @@ body {
 }
 
 /*
+ * Tells the browser which scheme native form controls (<select> popups,
+ * scrollbars, etc.) should render in - without this, a <select>'s option
+ * list keeps using the browser's light-scheme chrome (white background)
+ * even after --color-ink flips to its near-white dark-mode value below,
+ * making unselected options nearly invisible against that white popup.
+ */
+:root {
+  color-scheme: light;
+}
+
+/*
+ * Belt-and-braces alongside color-scheme above: some engines (seen in
+ * headless Chromium) still render the <option> popup with light-scheme
+ * chrome regardless of color-scheme, so the popup's own background/text
+ * are set explicitly too rather than relying on that alone.
+ */
+select,
+select option {
+  background-color: var(--color-white);
+  color: var(--color-ink);
+}
+
+/*
  * Dark mode works by overriding the same --color-* variables the @theme
  * block above defines (plus --color-white, which Tailwind's built-in
  * palette also exposes as a variable) rather than adding dark: variants to
@@ -36,6 +59,7 @@ body {
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --color-cream: #1c1917;
     --color-ink: #ece6dc;
     --color-line: #3a352c;
@@ -46,6 +70,7 @@ body {
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --color-cream: #1c1917;
   --color-ink: #ece6dc;
   --color-line: #3a352c;
