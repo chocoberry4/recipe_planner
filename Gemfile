@@ -3,6 +3,11 @@ source "https://rubygems.org"
 gem "rails", "~> 8.0.3"
 
 gem "active_model_serializers", "~> 0.10.15"
+# Generates resized ActiveStorage variants (recipe thumbnails) via libvips,
+# already installed in the Dockerfile - without this, an uploaded/imported
+# image is served at its full original resolution everywhere, including tiny
+# list/picker thumbnails.
+gem "image_processing", "~> 1.2"
 gem "bcrypt"
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false

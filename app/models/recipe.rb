@@ -14,6 +14,25 @@ class Recipe < ApplicationRecord
   # RecipeUpdater/RecipeImagesController for how setting one clears the other.
   has_one_attached :image
 
+  # An uploaded/imported image is often a full-resolution photo (seen well
+  # over 1MB) - serving that untouched into a 64px list thumbnail or a 384px
+  # detail-page hero was the main cause of slow image loads. These two sizes
+  # cover every place `image` is actually displayed at (see RecipeSummarySerializer
+  # and RecipeSerializer's own image_url); resize_to_fill crops the thumbnail
+  # to a clean square (list/picker tiles are both square), resize_to_limit
+  # only shrinks the large variant, never upscales a smaller original.
+  # Recipe photos are never PNGs/GIFs for a reason worth keeping (transparency,
+  # animation) - forcing JPEG output matters as much as the resize itself,
+  # since a losslessly-recompressed PNG can end up *larger* than the original
+  # even at a smaller size.
+  def thumbnail_variant
+    image.variant(resize_to_fill: [ 320, 320 ], format: :jpeg, saver: { quality: 80 })
+  end
+
+  def large_variant
+    image.variant(resize_to_limit: [ 1200, 1200 ], format: :jpeg, saver: { quality: 85 })
+  end
+
   validates :title, presence: true
   validates :description, presence: true
 end

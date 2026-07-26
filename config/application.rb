@@ -45,5 +45,14 @@ module RecipePlanner
       secure: false
     config.middleware.use ActionDispatch::Cookies
     config.middleware.use config.session_store, config.session_options
+
+    # Rails' default (5 minutes) means every ActiveStorage blob/variant URL's
+    # signed redirect - and the extra round-trip that goes with it - has to
+    # be re-resolved that often even though the underlying file never
+    # changes (blobs are content-addressed; a different image is a different
+    # blob/URL entirely). Recipe photos aren't sensitive content, so a long
+    # expiry trades a bit of URL-sharing precision for far fewer of those
+    # redirects in the common case of browsing recipes repeatedly.
+    config.active_storage.service_urls_expire_in = 1.day
   end
 end

@@ -76,6 +76,7 @@
             v-if="recipe.image_url"
             :src="recipe.image_url"
             alt=""
+            loading="lazy"
             class="h-16 w-16 shrink-0 rounded-lg object-cover"
           />
           <div class="min-w-0">

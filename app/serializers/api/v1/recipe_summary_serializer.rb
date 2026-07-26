@@ -11,9 +11,11 @@ module Api
       attributes :id, :title, :description, :image_url, :user_id, :duration_minutes, :tags, :created_at, :updated_at
 
       # An uploaded file (Recipe#image) wins over the pasted-URL column
-      # whenever one is attached - see Recipe's has_one_attached comment.
+      # whenever one is attached - see Recipe's has_one_attached comment. The
+      # list/picker views this feeds only ever show a small square tile, so
+      # this serves the thumbnail variant rather than the full original.
       def image_url
-        return Rails.application.routes.url_helpers.rails_blob_path(object.image, only_path: true) if object.image.attached?
+        return Rails.application.routes.url_helpers.rails_representation_path(object.thumbnail_variant, only_path: true) if object.image.attached?
 
         object.image_url
       end

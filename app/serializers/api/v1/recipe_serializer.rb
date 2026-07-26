@@ -21,9 +21,12 @@ module Api
                  :recipe_ingredient_groups, :ingredients, :instructions, :tags, :created_at, :updated_at
 
       # An uploaded file (Recipe#image) wins over the pasted-URL column
-      # whenever one is attached - see Recipe's has_one_attached comment.
+      # whenever one is attached - see Recipe's has_one_attached comment. The
+      # detail/review/step-mode views this feeds show a larger hero image, so
+      # this serves the large variant (caps oversized originals, never
+      # upscales) rather than the full original.
       def image_url
-        return Rails.application.routes.url_helpers.rails_blob_path(object.image, only_path: true) if object.image.attached?
+        return Rails.application.routes.url_helpers.rails_representation_path(object.large_variant, only_path: true) if object.image.attached?
 
         object.image_url
       end
