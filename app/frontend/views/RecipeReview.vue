@@ -184,7 +184,7 @@
           :row="ri"
           :groups="groups"
           @remove="removeIngredient(ri._key)"
-          @commit="materializeNewIngredients"
+          @commit="materializeNewRows"
         />
 
         <button
@@ -205,7 +205,7 @@
           :row="ri"
           :groups="groups"
           @remove="removeIngredient(ri._key)"
-          @commit="materializeNewIngredients"
+          @commit="materializeNewRows"
         />
 
         <button
@@ -287,6 +287,7 @@
             v-model="instruction.description"
             rows="4"
             class="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+            @blur="materializeNewRows"
           ></textarea>
           <div class="flex shrink-0 flex-col gap-1">
             <button
@@ -818,10 +819,25 @@ function closeWordPicker() {
   wordPickerQuery.value = ''
 }
 
+// A naive singular form (trailing "-ies"/"-es"/"-s" stripped) - the
+// double-clicked word is often a plain plural of the ingredient's name
+// ("carrots" in the step text vs. an ingredient named "carrot"), and a
+// plain substring check alone would never match that.
+function singularize(word) {
+  if (word.endsWith('ies') && word.length > 4) return `${word.slice(0, -3)}y`
+  if (word.endsWith('es') && word.length > 3) return word.slice(0, -2)
+  if (word.endsWith('s') && word.length > 3) return word.slice(0, -1)
+  return word
+}
+
 const wordPickerMatches = computed(() => {
   const q = wordPickerQuery.value.trim().toLowerCase()
   if (!q) return unresolvedOptions.value
-  return unresolvedOptions.value.filter((opt) => opt.label.toLowerCase().includes(q))
+  const qSingular = singularize(q)
+  return unresolvedOptions.value.filter((opt) => {
+    const label = opt.label.toLowerCase()
+    return label.includes(q) || label.includes(qSingular)
+  })
 })
 
 function pickWordPickerOption(opt) {
@@ -879,22 +895,25 @@ function buildPayload() {
   }
 }
 
-// Assigning an ingredient to a step needs a real recipe_ingredient id
-// (instruction_ingredients is a foreign-key join), so a freshly-added row is
-// stuck unassignable until it's persisted. Rather than making the user hit
-// the main Save button just to unlock that, this silently persists the
-// recipe's fields (not the in-progress step-assignment draft - `assignments`
-// is left untouched) as soon as a new ingredient's name is committed, then
-// patches the real id back onto the matching local row so it shows up in the
-// combobox. Matching is by `position`/`step_number` value (not array index),
-// since a same-request blank new row is skipped server-side and would
-// otherwise shift everything after it out of alignment.
+// Assigning an ingredient to a step (or double-click-assigning a word in a
+// step's own text - see openWordPicker) needs a real recipe_ingredient id
+// and instruction id respectively (instruction_ingredients is a foreign-key
+// join on both), so a freshly-added ingredient or step is stuck unusable
+// until it's persisted. Rather than making the user hit the main Save button
+// just to unlock that, this silently persists the recipe's fields (not the
+// in-progress step-assignment draft - `assignments` is left untouched) as
+// soon as a new ingredient's name or a new step's description is committed,
+// then patches the real id back onto the matching local row. Matching is by
+// `position`/`step_number` value (not array index), since a same-request
+// blank new row is skipped server-side and would otherwise shift everything
+// after it out of alignment.
 let materializing = false
 let materializePending = false
 
-async function materializeNewIngredients() {
+async function materializeNewRows() {
   const hasNewNamed = ingredients.value.some((ri) => !ri.id && ri.name && ri.name.trim())
-  if (!hasNewNamed) return
+  const hasNewStep = instructions.value.some((ins) => !ins.id && ins.description && ins.description.trim())
+  if (!hasNewNamed && !hasNewStep) return
 
   if (materializing) {
     materializePending = true
@@ -947,7 +966,7 @@ async function materializeNewIngredients() {
 
   if (materializePending) {
     materializePending = false
-    materializeNewIngredients()
+    materializeNewRows()
   }
 }
 
