@@ -14,8 +14,13 @@ module Api
       # whenever one is attached - see Recipe's has_one_attached comment. The
       # list/picker views this feeds only ever show a small square tile, so
       # this serves the thumbnail variant rather than the full original.
+      # rails_storage_proxy_path (not rails_representation_path) streams the
+      # file through the app instead of redirecting to a short-lived signed
+      # disk URL, and sends a real Cache-Control: public, immutable, 100-year
+      # header - safe because a blob's key is content-addressed, so a changed
+      # image is always a different URL, never a stale cache of one.
       def image_url
-        return Rails.application.routes.url_helpers.rails_representation_path(object.thumbnail_variant, only_path: true) if object.image.attached?
+        return Rails.application.routes.url_helpers.rails_storage_proxy_path(object.thumbnail_variant, only_path: true) if object.image.attached?
 
         object.image_url
       end
