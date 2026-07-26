@@ -62,7 +62,8 @@ class Api::BaseController < ApplicationController
       show_lunch: user.show_lunch,
       show_dinner: user.show_dinner,
       show_snack: user.show_snack,
-      home_view: user.home_view
+      home_view: user.home_view,
+      tandoor_import_enabled: user.tandoor_import_enabled
     }
   end
 end

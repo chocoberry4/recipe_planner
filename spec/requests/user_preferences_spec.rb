@@ -25,6 +25,7 @@ RSpec.describe "UserPreferences", type: :request do
       expect(body["show_dinner"]).to be true
       expect(body["show_snack"]).to be true
       expect(body["home_view"]).to eq("random_recipes")
+      expect(body["tandoor_import_enabled"]).to be false
     end
   end
 
@@ -57,6 +58,17 @@ RSpec.describe "UserPreferences", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["home_view"]).to eq("weekly_planner")
       expect(user.reload.home_view).to eq("weekly_planner")
+    end
+
+    it "updates tandoor_import_enabled" do
+      user = create(:user)
+      log_in_as(user)
+
+      patch "/api/v1/user_preferences", params: { tandoor_import_enabled: true }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["tandoor_import_enabled"]).to be true
+      expect(user.reload.tandoor_import_enabled).to be true
     end
   end
 end

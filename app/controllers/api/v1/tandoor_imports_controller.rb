@@ -2,6 +2,7 @@ module Api
   module V1
     class TandoorImportsController < Api::BaseController
       before_action :require_login
+      before_action :require_tandoor_import_enabled
 
       def create
         file = params[:file]
@@ -20,6 +21,10 @@ module Api
       end
 
       private
+
+      def require_tandoor_import_enabled
+        render json: { errors: [ "Tandoor import is not enabled" ] }, status: :not_found unless current_user.tandoor_import_enabled?
+      end
 
       def tandoor_import_json(tandoor_import)
         recipes = Recipe.includes(RecipeSerializer::EAGER_LOAD).where(id: tandoor_import.recipe_ids)

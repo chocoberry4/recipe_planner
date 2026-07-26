@@ -37,8 +37,16 @@ RSpec.describe "TandoorImports", type: :request do
       expect(response).to have_http_status(:unauthorized)
     end
 
+    it "404s when the current user hasn't enabled Tandoor import" do
+      log_in_as(create(:user, tandoor_import_enabled: false))
+
+      post "/api/v1/tandoor_imports"
+
+      expect(response).to have_http_status(:not_found)
+    end
+
     it "returns an error when no file is uploaded" do
-      log_in_as(create(:user))
+      log_in_as(create(:user, tandoor_import_enabled: true))
 
       post "/api/v1/tandoor_imports"
 
@@ -47,7 +55,7 @@ RSpec.describe "TandoorImports", type: :request do
     end
 
     it "creates a pending import, attaches the zip, and enqueues the processing job" do
-      user = create(:user)
+      user = create(:user, tandoor_import_enabled: true)
       log_in_as(user)
       zip = build_tandoor_zip(valid_recipe_data)
 
@@ -74,16 +82,26 @@ RSpec.describe "TandoorImports", type: :request do
     end
 
     it "404s for another user's import" do
-      log_in_as(create(:user))
-      other_users_import = create(:user).tandoor_imports.create!
+      log_in_as(create(:user, tandoor_import_enabled: true))
+      other_users_import = create(:user, tandoor_import_enabled: true).tandoor_imports.create!
 
       get "/api/v1/tandoor_imports/#{other_users_import.id}"
 
       expect(response).to have_http_status(:not_found)
     end
 
+    it "404s when the current user hasn't enabled Tandoor import" do
+      user = create(:user, tandoor_import_enabled: false)
+      log_in_as(user)
+      tandoor_import = user.tandoor_imports.create!
+
+      get "/api/v1/tandoor_imports/#{tandoor_import.id}"
+
+      expect(response).to have_http_status(:not_found)
+    end
+
     it "reports progress and results for the current user's import" do
-      user = create(:user)
+      user = create(:user, tandoor_import_enabled: true)
       log_in_as(user)
       recipe = create(:recipe, user: user)
       tandoor_import = user.tandoor_imports.create!(

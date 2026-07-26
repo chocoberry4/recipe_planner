@@ -20,6 +20,7 @@
         Paste text
       </button>
       <button
+        v-if="auth.user?.tandoor_import_enabled"
         type="button"
         class="flex-1 rounded-full py-1.5 transition-colors cursor-pointer"
         :class="mode === 'tandoor' ? 'bg-white text-ink shadow-sm' : 'text-ink/60 hover:text-ink'"
@@ -106,7 +107,7 @@
       </button>
     </form>
 
-    <form v-else class="mt-6 space-y-5" @submit.prevent="handleTandoorSubmit">
+    <form v-else-if="mode === 'tandoor' && auth.user?.tandoor_import_enabled" class="mt-6 space-y-5" @submit.prevent="handleTandoorSubmit">
       <div>
         <span class="text-sm font-medium text-ink/80">Tandoor export (.zip)</span>
         <div
@@ -171,11 +172,13 @@ import { ref, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipesStore } from '../stores/recipes'
 import { useMealPlansStore } from '../stores/mealPlans'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
 const router = useRouter()
 const recipes = useRecipesStore()
 const mealPlans = useMealPlansStore()
+const auth = useAuthStore()
 
 // Arriving from the planner's "Add" link on a freeform (non-recipe) meal
 // plan entry pre-fills the title so the name doesn't need retyping - "paste"
