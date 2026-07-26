@@ -22,6 +22,12 @@ class RecipeUpdater
 
   def call
     ActiveRecord::Base.transaction do
+      # An explicit image_url write (pasting or clearing a URL) always wins
+      # over whatever file might be attached - RecipeImagesController's
+      # upload path does the mirror image (clears image_url when a file is
+      # attached), so exactly one of the two is ever the active source.
+      @recipe.image.purge if @params.key?(:image_url) && @recipe.image.attached?
+
       @recipe.update!(@params.slice(:title, :description, :image_url, :duration_minutes, :source_url))
 
       upsert_groups(@params[:recipe_ingredient_groups] || [])

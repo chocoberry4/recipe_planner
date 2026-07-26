@@ -58,6 +58,42 @@ export const useRecipesStore = defineStore('recipes', {
       return importRecipe({ title, description, ingredients_text, instructions_text })
     },
 
+    async uploadImage(recipeId, file) {
+      const formData = new FormData()
+      formData.append('image', file)
+
+      const response = await fetch(`/api/v1/recipes/${recipeId}/image`, {
+        method: 'POST',
+        credentials: 'include',
+        // No Content-Type header - the browser sets the multipart boundary
+        // itself when the body is a FormData instance.
+        headers: { 'X-CSRF-Token': csrfToken() },
+        body: formData,
+      })
+      const body = await response.json().catch(() => ({}))
+
+      if (response.ok) {
+        this.current = body
+        return { ok: true, recipe: body }
+      }
+      return { ok: false, errors: body.errors || [ body.error || 'Something went wrong' ] }
+    },
+
+    async removeImage(recipeId) {
+      const response = await fetch(`/api/v1/recipes/${recipeId}/image`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'X-CSRF-Token': csrfToken() },
+      })
+      const body = await response.json().catch(() => ({}))
+
+      if (response.ok) {
+        this.current = body
+        return { ok: true, recipe: body }
+      }
+      return { ok: false }
+    },
+
     async fetchImageCandidates(recipeId) {
       const response = await fetch(`/api/v1/recipes/${recipeId}/image_candidates`, { credentials: 'include' })
       if (!response.ok) return { ok: false, imageUrls: [] }

@@ -20,15 +20,30 @@
           class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
         ></textarea>
       </label>
-      <label class="block">
-        <span class="block text-sm font-medium text-ink/80">Duration (minutes)</span>
-        <input
-          v-model.number="durationMinutes"
-          type="number"
-          min="0"
-          class="mt-2 w-32 rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-        />
-      </label>
+      <div>
+        <span class="block text-sm font-medium text-ink/80">Duration</span>
+        <div class="mt-2 flex items-center gap-2">
+          <input
+            v-model.number="durationHours"
+            type="number"
+            min="0"
+            placeholder="0"
+            aria-label="Hours"
+            class="w-20 rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
+          <span class="text-sm text-ink/60">hr</span>
+          <input
+            v-model.number="durationMins"
+            type="number"
+            min="0"
+            max="59"
+            placeholder="0"
+            aria-label="Minutes"
+            class="w-20 rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
+          <span class="text-sm text-ink/60">min</span>
+        </div>
+      </div>
       <label class="block">
         <span class="text-sm font-medium text-ink/80">Source URL</span>
         <input
@@ -72,10 +87,22 @@
       </p>
     </div>
 
-    <section v-if="imageUrl || imageCandidates.length" class="mt-6">
+    <section class="mt-6">
       <h2 class="text-sm font-medium text-ink/80">Image</h2>
       <p v-if="imageSaveError" class="mt-2 text-sm text-accent-dark">{{ imageSaveError }}</p>
-      <div class="mt-2 flex gap-3 overflow-x-auto pb-1">
+
+      <div v-if="imageUrl" class="mt-2 flex items-center gap-3">
+        <img :src="imageUrl" alt="" class="h-24 w-24 rounded-lg border border-line object-cover" />
+        <button
+          type="button"
+          class="text-sm font-medium text-ink/50 hover:text-accent-dark cursor-pointer"
+          @click="removeImage"
+        >
+          Remove image
+        </button>
+      </div>
+
+      <div v-if="imageCandidates.length" class="mt-3 flex gap-3 overflow-x-auto pb-1">
         <button
           v-for="url in imageCandidates"
           :key="url"
@@ -87,6 +114,45 @@
           @click="selectImage(url)"
         >
           <img :src="url" alt="" class="h-full w-full object-cover" loading="lazy" />
+        </button>
+      </div>
+
+      <div
+        class="mt-3 flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors cursor-pointer"
+        :class="isDraggingImage ? 'border-accent bg-accent-soft/40' : 'border-line hover:border-accent/50'"
+        @click="triggerFilePicker"
+        @dragover.prevent="isDraggingImage = true"
+        @dragleave="isDraggingImage = false"
+        @drop.prevent="handleImageDrop"
+      >
+        <p class="text-sm font-medium text-ink/70">
+          {{ imageUploading ? 'Uploading...' : 'Drop an image here, or click to choose a file' }}
+        </p>
+        <p class="text-xs text-ink/40">JPEG, PNG, WEBP, or GIF, up to 5MB</p>
+        <input
+          ref="fileInput"
+          type="file"
+          accept="image/*"
+          class="hidden"
+          @change="handleFileInputChange"
+          @click.stop
+        />
+      </div>
+
+      <div class="mt-3 flex gap-2">
+        <input
+          v-model="imageUrlInput"
+          type="url"
+          placeholder="Or paste an image URL..."
+          class="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+          @keydown.enter.prevent="saveImageUrl"
+        />
+        <button
+          type="button"
+          class="shrink-0 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-accent-dark hover:text-accent-dark cursor-pointer"
+          @click="saveImageUrl"
+        >
+          Save
         </button>
       </div>
     </section>
@@ -341,7 +407,27 @@ const recipe = computed(() => recipes.current)
 
 const title = ref('')
 const description = ref('')
-const durationMinutes = ref(null)
+// The backend still stores/reads a single total-minutes integer - these two
+// fields are purely a "don't make me do the math" input convenience, kept
+// in sync with it via seedFromRecipe (splitting) and durationMinutes
+// (combining) below.
+const durationHours = ref(null)
+const durationMins = ref(null)
+
+// v-model.number leaves a *cleared* number input as '' rather than null (it
+// only falls back to the raw string when parseFloat fails) - blank has to be
+// checked for both, or clearing both fields would save as 0 instead of "no
+// duration set".
+function isBlankDurationField(value) {
+  return value === '' || value == null
+}
+
+const durationMinutes = computed(() => {
+  if (isBlankDurationField(durationHours.value) && isBlankDurationField(durationMins.value)) return null
+  const hours = isBlankDurationField(durationHours.value) ? 0 : durationHours.value
+  const mins = isBlankDurationField(durationMins.value) ? 0 : durationMins.value
+  return hours * 60 + mins
+})
 const sourceUrl = ref('')
 const tags = ref([])
 const tagInput = ref('')
@@ -352,6 +438,10 @@ const instructions = ref([])
 const imageUrl = ref(null)
 const imageCandidates = ref([])
 const imageSaveError = ref(null)
+const imageUrlInput = ref('')
+const isDraggingImage = ref(false)
+const imageUploading = ref(false)
+const fileInput = ref(null)
 
 // Rows removed locally just disappear from the arrays above, but the
 // backend only destroys what's explicitly marked - anything simply absent
@@ -379,7 +469,8 @@ function nextKey() {
 function seedFromRecipe(data) {
   title.value = data.title
   description.value = data.description
-  durationMinutes.value = data.duration_minutes
+  durationHours.value = data.duration_minutes != null ? Math.floor(data.duration_minutes / 60) : null
+  durationMins.value = data.duration_minutes != null ? data.duration_minutes % 60 : null
   sourceUrl.value = data.source_url || ''
   tags.value = data.tags.map((tag) => tag.name)
   imageUrl.value = data.image_url
@@ -425,8 +516,11 @@ onMounted(async () => {
 
   const imagesResult = await recipes.fetchImageCandidates(route.params.id)
   // The currently-selected image stays shown (and highlighted) even if a
-  // fresh scrape no longer turns it up - e.g. the source page changed.
-  imageCandidates.value = imageUrl.value && !imagesResult.imageUrls.includes(imageUrl.value)
+  // fresh scrape no longer turns it up - e.g. the source page changed. But
+  // only when there's something else to pick between - otherwise (no
+  // source_url, or a manually uploaded/pasted image) this row would just
+  // show the same image already previewed above as its own sole "option".
+  imageCandidates.value = imagesResult.imageUrls.length && imageUrl.value && !imagesResult.imageUrls.includes(imageUrl.value)
     ? [ imageUrl.value, ...imagesResult.imageUrls ]
     : imagesResult.imageUrls
 })
@@ -441,6 +535,65 @@ async function selectImage(url) {
     imageUrl.value = previous
     imageSaveError.value = (result.errors || []).join(', ') || 'Failed to set cover image.'
   }
+}
+
+async function saveImageUrl() {
+  const url = imageUrlInput.value.trim()
+  if (!url) return
+
+  imageSaveError.value = null
+  const previous = imageUrl.value
+  imageUrl.value = url
+
+  const result = await recipes.update(route.params.id, { image_url: url })
+  if (result.ok) {
+    imageUrlInput.value = ''
+  } else {
+    imageUrl.value = previous
+    imageSaveError.value = (result.errors || []).join(', ') || 'Failed to set cover image.'
+  }
+}
+
+async function removeImage() {
+  imageSaveError.value = null
+  const previous = imageUrl.value
+  imageUrl.value = null
+
+  const result = await recipes.removeImage(route.params.id)
+  if (!result.ok) {
+    imageUrl.value = previous
+    imageSaveError.value = 'Failed to remove image.'
+  }
+}
+
+async function uploadImageFile(file) {
+  imageSaveError.value = null
+  imageUploading.value = true
+
+  const result = await recipes.uploadImage(route.params.id, file)
+  imageUploading.value = false
+
+  if (result.ok) {
+    imageUrl.value = result.recipe.image_url
+  } else {
+    imageSaveError.value = (result.errors || []).join(', ') || 'Failed to upload image.'
+  }
+}
+
+function triggerFilePicker() {
+  fileInput.value?.click()
+}
+
+function handleFileInputChange(event) {
+  const file = event.target.files?.[0]
+  if (file) uploadImageFile(file)
+  event.target.value = '' // allow re-selecting the same file next time
+}
+
+function handleImageDrop(event) {
+  isDraggingImage.value = false
+  const file = event.dataTransfer?.files?.[0]
+  if (file) uploadImageFile(file)
 }
 
 function commitTagInput() {

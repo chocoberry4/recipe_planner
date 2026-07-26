@@ -15,10 +15,18 @@ module Api
       # select/map) rather than calling .where/.order/.pluck *on* an
       # association, since those always issue a fresh query and silently
       # ignore whatever `includes` already loaded.
-      EAGER_LOAD = { recipe_ingredient_groups: {}, recipe_ingredients: :ingredient, instructions: :instruction_ingredients, tags: {} }.freeze
+      EAGER_LOAD = { recipe_ingredient_groups: {}, recipe_ingredients: :ingredient, instructions: :instruction_ingredients, tags: {}, image_attachment: :blob }.freeze
 
       attributes :id, :title, :description, :image_url, :user_id, :source_url, :duration_minutes,
                  :recipe_ingredient_groups, :ingredients, :instructions, :tags, :created_at, :updated_at
+
+      # An uploaded file (Recipe#image) wins over the pasted-URL column
+      # whenever one is attached - see Recipe's has_one_attached comment.
+      def image_url
+        return Rails.application.routes.url_helpers.rails_blob_path(object.image, only_path: true) if object.image.attached?
+
+        object.image_url
+      end
 
       def tags
         object.tags.sort_by(&:name).map { |tag| { id: tag.id, name: tag.name } }

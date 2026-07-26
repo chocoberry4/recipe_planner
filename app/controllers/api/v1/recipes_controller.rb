@@ -11,7 +11,7 @@ module Api
       before_action :find_recipe, only: %i[show update destroy]
 
       def index
-        render json: current_user.recipes.includes(:tags), each_serializer: RecipeSummarySerializer
+        render json: current_user.recipes.includes(:tags, image_attachment: :blob), each_serializer: RecipeSummarySerializer
       end
 
       def show
