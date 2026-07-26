@@ -226,6 +226,22 @@
       </button>
     </section>
 
+    <section class="mt-8 border-t border-line pt-6">
+      <h2 class="font-display text-lg font-semibold text-sage">Unresolved ingredients</h2>
+      <p v-if="unresolved.length === 0" class="mt-2 text-sm text-ink/50">
+        Everything's assigned to a step.
+      </p>
+      <ul v-else class="mt-3 flex flex-wrap gap-2">
+        <li
+          v-for="ri in unresolved"
+          :key="ri._key"
+          class="rounded-full border border-line px-3 py-1 text-sm text-ink/70"
+        >
+          {{ ingredientLabel(ri) }}
+        </li>
+      </ul>
+    </section>
+
     <section class="mt-8 space-y-5 border-t border-line pt-6">
       <h2 class="font-display text-lg font-semibold text-sage">Steps</h2>
       <div
@@ -292,6 +308,16 @@
               &darr;
             </button>
           </div>
+        </div>
+
+        <div v-if="instruction.id" class="mt-3 ml-9">
+          <p
+            class="cursor-pointer select-text rounded-lg bg-cream px-3 py-2 text-sm leading-relaxed text-ink/80"
+            @dblclick="openWordPicker(instruction, $event)"
+          >{{ instruction.description }}</p>
+          <p class="mt-1 text-xs text-ink/40">
+            Double-click a word above to assign an ingredient to this step.
+          </p>
         </div>
 
         <div class="mt-3 ml-9 flex items-center gap-3">
@@ -382,11 +408,49 @@
       @confirm="confirmDelete"
       @cancel="showDeleteConfirm = false"
     />
+
+    <Teleport to="body">
+      <div
+        v-if="wordPicker"
+        class="fixed inset-0 z-50"
+        @click="closeWordPicker"
+        @keydown.escape="closeWordPicker"
+      >
+        <div
+          class="absolute w-56 rounded-lg border border-line bg-white p-2 shadow-lg"
+          :style="{ top: `${wordPicker.top}px`, left: `${wordPicker.left}px` }"
+          @click.stop
+        >
+          <input
+            ref="wordPickerInput"
+            v-model="wordPickerQuery"
+            type="text"
+            placeholder="Search ingredients..."
+            class="w-full rounded-md border border-line px-2 py-1 text-sm outline-none focus:border-accent"
+            @keydown.escape="closeWordPicker"
+            @keydown.enter="selectFirstWordPickerMatch"
+          />
+          <ul class="mt-1 max-h-40 overflow-auto">
+            <li v-if="wordPickerMatches.length === 0" class="px-2 py-1 text-xs text-ink/40">
+              No unassigned ingredients match.
+            </li>
+            <li
+              v-for="opt in wordPickerMatches"
+              :key="opt.id"
+              class="cursor-pointer rounded px-2 py-1 text-sm text-ink/80 hover:bg-cream"
+              @click="pickWordPickerOption(opt)"
+            >
+              {{ opt.label }}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { reactive, computed, ref, onMounted } from 'vue'
+import { reactive, computed, ref, nextTick, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipesStore } from '../stores/recipes'
 import IngredientCombobox from '../components/IngredientCombobox.vue'
@@ -718,6 +782,57 @@ function addToStep(instructionId, recipeIngredientId) {
 
 function ingredientLabel(ri) {
   return [ ri.quantity, ri.unit, ri.name ].filter(Boolean).join(' ')
+}
+
+// A quicker alternate path to the same IngredientCombobox at the bottom of
+// the card: double-clicking a word in the preview above relies on the
+// browser's native double-click word-selection to read that word back out
+// (rather than re-tokenizing the text ourselves), and opens a small
+// dropdown - pre-filtered by that word - of the same unresolvedOptions the
+// combobox already offers. Picking one calls the same addToStep used
+// everywhere else ingredients get assigned.
+const wordPicker = ref(null) // { instructionId, top, left } | null
+const wordPickerQuery = ref('')
+const wordPickerInput = ref(null)
+
+// Rough popup dimensions (matches w-56 plus its usual content height) - just
+// enough to keep it from overflowing off-screen when double-clicking near
+// the right or bottom edge, not a pixel-perfect measurement.
+const WORD_PICKER_WIDTH = 224
+const WORD_PICKER_HEIGHT = 200
+
+function openWordPicker(instruction, event) {
+  if (!instruction.id) return
+  const selectedWord = window.getSelection()?.toString().trim() || ''
+  wordPickerQuery.value = selectedWord
+  wordPicker.value = {
+    instructionId: instruction.id,
+    top: Math.max(0, Math.min(event.clientY, window.innerHeight - WORD_PICKER_HEIGHT)),
+    left: Math.max(0, Math.min(event.clientX, window.innerWidth - WORD_PICKER_WIDTH)),
+  }
+  nextTick(() => wordPickerInput.value?.focus())
+}
+
+function closeWordPicker() {
+  wordPicker.value = null
+  wordPickerQuery.value = ''
+}
+
+const wordPickerMatches = computed(() => {
+  const q = wordPickerQuery.value.trim().toLowerCase()
+  if (!q) return unresolvedOptions.value
+  return unresolvedOptions.value.filter((opt) => opt.label.toLowerCase().includes(q))
+})
+
+function pickWordPickerOption(opt) {
+  if (!wordPicker.value) return
+  addToStep(wordPicker.value.instructionId, opt.id)
+  closeWordPicker()
+}
+
+function selectFirstWordPickerMatch() {
+  const opt = wordPickerMatches.value[0]
+  if (opt) pickWordPickerOption(opt)
 }
 
 function toIngredientPayload(ri, position) {
