@@ -129,6 +129,89 @@ RSpec.describe RecipeImporter do
     end
   end
 
+  describe ".image_candidates_for" do
+    def html_with_images(json_ld_images:, body:)
+      <<~HTML
+        <html><head>
+          <script type="application/ld+json">#{{ "@type" => "Recipe", "name" => "Tacos", "image" => json_ld_images }.to_json}</script>
+        </head><body>#{body}</body></html>
+      HTML
+    end
+
+    it "leads with JSON-LD images, then every other <img> found on the page" do
+      html = html_with_images(
+        json_ld_images: [ "https://example.com/hero.jpg" ],
+        body: '<img src="https://example.com/gallery-1.jpg"><img src="/gallery-2.jpg">'
+      )
+      allow(described_class).to receive(:fetch_html).and_return(html)
+
+      urls = described_class.image_candidates_for("https://example.com/tacos")
+
+      expect(urls).to eq([
+        "https://example.com/hero.jpg",
+        "https://example.com/gallery-1.jpg",
+        "https://example.com/gallery-2.jpg"
+      ])
+    end
+
+    it "resolves a page-relative <img src> against the source page's URL" do
+      html = html_with_images(json_ld_images: [], body: '<img src="/images/photo.jpg">')
+      allow(described_class).to receive(:fetch_html).and_return(html)
+
+      urls = described_class.image_candidates_for("https://example.com/recipes/tacos")
+
+      expect(urls).to eq([ "https://example.com/images/photo.jpg" ])
+    end
+
+    it "prefers data-src, then the largest srcset candidate, over a lazy-load placeholder src" do
+      html = html_with_images(
+        json_ld_images: [],
+        body: <<~BODY
+          <img src="data:image/gif;base64,R0lGOD" data-src="https://example.com/real.jpg">
+          <img src="data:image/gif;base64,R0lGOD" srcset="https://example.com/small.jpg 480w, https://example.com/large.jpg 1200w">
+        BODY
+      )
+      allow(described_class).to receive(:fetch_html).and_return(html)
+
+      urls = described_class.image_candidates_for("https://example.com/tacos")
+
+      expect(urls).to contain_exactly("https://example.com/real.jpg", "https://example.com/large.jpg")
+    end
+
+    it "filters out logos, icons, and other small chrome images" do
+      html = html_with_images(
+        json_ld_images: [],
+        body: <<~BODY
+          <img src="https://example.com/site-logo.png">
+          <img src="https://example.com/icon-share.svg">
+          <img src="https://example.com/tiny.jpg" width="40" height="40">
+          <img src="https://example.com/dish.jpg" width="800" height="600">
+        BODY
+      )
+      allow(described_class).to receive(:fetch_html).and_return(html)
+
+      urls = described_class.image_candidates_for("https://example.com/tacos")
+
+      expect(urls).to eq([ "https://example.com/dish.jpg" ])
+    end
+
+    it "dedupes and caps the combined candidate list" do
+      images = (1..30).map { |n| %(<img src="https://example.com/photo-#{n}.jpg">) }.join
+      html = html_with_images(json_ld_images: [ "https://example.com/photo-1.jpg" ], body: images)
+      allow(described_class).to receive(:fetch_html).and_return(html)
+
+      urls = described_class.image_candidates_for("https://example.com/tacos")
+
+      expect(urls.length).to eq(described_class::MAX_IMAGE_CANDIDATES)
+      expect(urls.first).to eq("https://example.com/photo-1.jpg")
+      expect(urls.uniq).to eq(urls)
+    end
+
+    it "returns an empty array when the recipe has no source_url" do
+      expect(described_class.image_candidates_for(nil)).to eq([])
+    end
+  end
+
   describe ".from_text" do
     it "parses raw ingredient/instruction text and runs the autosorter" do
       user = create(:user)

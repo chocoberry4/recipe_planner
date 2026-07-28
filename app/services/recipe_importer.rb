@@ -66,10 +66,24 @@ class RecipeImporter
     )
   end
 
-  # Re-fetches a recipe's source page and re-extracts its JSON-LD image
-  # candidates, for the review UI's image picker. Not persisted anywhere -
-  # called fresh each time it's needed, which also means it stays correct if
-  # revisited later even though nothing was cached from the original import.
+  # A page's own <img> tags are a much bigger, noisier pool than JSON-LD's
+  # curated `image` field (nav logos, share icons, related-post thumbnails,
+  # tracking pixels) - still capped, just much more generously than
+  # JsonLdRecipeExtractor::MAX_IMAGES, since offering more choice is the
+  # whole point of scanning the page at all.
+  MAX_IMAGE_CANDIDATES = 24
+
+  # Filename/URL keywords for the kind of small chrome images that show up
+  # on nearly every page and are never the recipe's own photo.
+  NOISE_IMAGE_PATTERN = /logo|icon|sprite|avatar|placeholder|pixel|spacer|tracking|badge|social|share-|blank\.(gif|png)/i
+
+  # Re-fetches a recipe's source page for the review UI's image picker. Not
+  # persisted anywhere - called fresh each time it's needed, which also means
+  # it stays correct if revisited later even though nothing was cached from
+  # the original import. Leads with JSON-LD's `image` field (the site's own
+  # best guess at "the" recipe photo) followed by every other <img> found
+  # anywhere on the page, so a sparse or wrong JSON-LD image field doesn't
+  # limit the picker to nothing useful.
   def self.image_candidates_for(source_url)
     return [] if source_url.blank?
 
@@ -79,8 +93,46 @@ class RecipeImporter
     html = fetch_html(uri)
     return [] unless html
 
-    JsonLdRecipeExtractor.extract(html)&.image_urls || []
+    jsonld_images = JsonLdRecipeExtractor.extract(html)&.image_urls || []
+    (jsonld_images + page_image_urls(html, uri)).uniq.first(MAX_IMAGE_CANDIDATES)
   end
+
+  def self.page_image_urls(html, base_uri)
+    Nokogiri::HTML(html).css("img").filter_map { |img| resolve_image_src(img, base_uri) }.uniq
+  end
+  private_class_method :page_image_urls
+
+  # Lazy-loaded images commonly park a tiny placeholder (often a `data:` URI)
+  # in `src` and the real image in `data-src` or `srcset` - preferred in that
+  # order, falling back to `src` only when it isn't itself a data URI.
+  def self.resolve_image_src(img, base_uri)
+    return nil if noise_image?(img)
+
+    candidates = [ img["data-src"], largest_srcset_url(img["srcset"]), img["src"] ]
+    src = candidates.find { |candidate| candidate.present? && !candidate.start_with?("data:") }
+    return nil if src.blank?
+
+    URI.join(base_uri, src).to_s
+  rescue URI::InvalidURIError
+    nil
+  end
+  private_class_method :resolve_image_src
+
+  # srcset entries are conventionally ordered smallest-to-largest
+  # ("a.jpg 480w, b.jpg 800w, c.jpg 1200w") - the last one is the best
+  # candidate for a cover photo.
+  def self.largest_srcset_url(srcset)
+    srcset.to_s.split(",").filter_map { |part| part.strip.split(/\s+/).first }.last
+  end
+  private_class_method :largest_srcset_url
+
+  def self.noise_image?(img)
+    src = "#{img['src']} #{img['data-src']} #{img['class']}"
+    return true if src.match?(NOISE_IMAGE_PATTERN)
+
+    %w[width height].any? { |attr| img[attr].to_i.positive? && img[attr].to_i < 100 }
+  end
+  private_class_method :noise_image?
 
   # Checkbox glyphs some recipe sites/plugins prepend to each ingredient when
   # their "printer-friendly"/checklist view gets copy-pasted (e.g. "▢1 garlic

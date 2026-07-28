@@ -88,6 +88,18 @@
               <button
                 type="button"
                 class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-ink/15 text-ink/40 hover:border-accent-dark hover:bg-accent-soft hover:text-accent-dark cursor-pointer transition-colors"
+                aria-label="Copy to another day"
+                title="Copy to another day"
+                @click="openCopyModal(plan)"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5">
+                  <rect x="9" y="9" width="11" height="11" rx="2" />
+                  <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-ink/15 text-ink/40 hover:border-accent-dark hover:bg-accent-soft hover:text-accent-dark cursor-pointer transition-colors"
                 aria-label="Remove"
                 @click="removePlan(plan)"
               >
@@ -143,6 +155,15 @@
       </div>
     </button>
   </div>
+
+  <CopyToDayModal
+    :open="copyModalPlan !== null"
+    :days="weekDaysList"
+    :source-date="copyModalPlan?.date ?? null"
+    :item-label="copyModalItemLabel"
+    @copy="handleCopyToDay"
+    @close="closeCopyModal"
+  />
 </template>
 
 <script setup>
@@ -152,6 +173,7 @@ import { useAuthStore } from '../stores/auth'
 import { startOfWeek, addDays, addMonths, toISODate, weekDays as weekDaysFn, monthGridWeeks, weekRangeLabel, monthLabel } from '../lib/calendar'
 import { visibleMealTypes, groupPlansBySlot, groupPlansByDate, MAX_MONTH_CELL_PLANS, slotLabel, weekdayLabel, dayNumberLabel } from '../lib/mealPlanSlots'
 import RecipePicker from '../components/RecipePicker.vue'
+import CopyToDayModal from '../components/CopyToDayModal.vue'
 
 const WEEKDAY_LABELS = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
 
@@ -231,6 +253,25 @@ async function addPlan(day, slot, payload) {
 
 async function removePlan(plan) {
   await mealPlans.destroy(plan.id)
+}
+
+const copyModalPlan = ref(null)
+
+const copyModalItemLabel = computed(() => copyModalPlan.value?.recipe?.title || copyModalPlan.value?.label || '')
+
+function openCopyModal(plan) {
+  copyModalPlan.value = plan
+}
+
+function closeCopyModal() {
+  copyModalPlan.value = null
+}
+
+async function handleCopyToDay(day) {
+  const plan = copyModalPlan.value
+  if (!plan) return
+  const payload = plan.recipe ? { recipeId: plan.recipe.id } : { label: plan.label }
+  await addPlan(day, plan.meal_type, payload)
 }
 
 function slotKey(day, slot) {
