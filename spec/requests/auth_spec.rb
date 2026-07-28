@@ -41,6 +41,30 @@ RSpec.describe "Auth", type: :request do
 
       expect(response).to have_http_status(:unauthorized)
     end
+
+    it "leaves the session cookie without an expiry by default (cleared on browser close)" do
+      post "/api/v1/login", params: { user: { email: user.email, password: "password123" } }
+
+      expect(session_cookie_header).not_to match(/expires=/i)
+    end
+
+    it "extends the session cookie's expiry when remember_me is checked" do
+      post "/api/v1/login", params: { user: { email: user.email, password: "password123", remember_me: true } }
+
+      expect(session_cookie_header).to match(/expires=/i)
+    end
+
+    it "keeps the extended expiry on later requests in the same session" do
+      # Rails re-signs and resends the session cookie on every response that
+      # touches the session, so the extended expiry needs to survive past
+      # the login response itself - regression coverage for BaseController's
+      # extend_session_if_remembered.
+      post "/api/v1/login", params: { user: { email: user.email, password: "password123", remember_me: true } }
+
+      get "/api/v1/me"
+
+      expect(session_cookie_header).to match(/expires=/i)
+    end
   end
 
   describe "DELETE /api/v1/logout" do
@@ -98,5 +122,15 @@ RSpec.describe "Auth", type: :request do
 
       expect(response).to have_http_status(:unauthorized)
     end
+  end
+
+  # Set-Cookie for a request holding multiple cookies (CSRF-TOKEN and the
+  # session cookie here) comes back as an Array in a test response but a
+  # single newline-joined header value on the wire - normalize to an Array
+  # and isolate just the session cookie's own attributes, so a match against
+  # "expires=" can't accidentally key off some other cookie.
+  def session_cookie_header
+    Array(response.headers["Set-Cookie"]).flat_map { |value| value.split("\n") }
+      .find { |line| line.start_with?("_recipe_planner_session=") }
   end
 end

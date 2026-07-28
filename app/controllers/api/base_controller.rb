@@ -18,12 +18,29 @@ class Api::BaseController < ApplicationController
   # (config/environments/test.rb sets it to false).
   self.allow_forgery_protection = Rails.application.config.action_controller.allow_forgery_protection
 
+  REMEMBER_ME_DURATION = 30.days
+
   before_action :set_csrf_cookie
+  before_action :extend_session_if_remembered
 
   private
 
   def set_csrf_cookie
     cookies["CSRF-TOKEN"] = form_authenticity_token
+  end
+
+  # Rails re-signs and re-sends the session cookie's Set-Cookie header on
+  # every response that touches the session (i.e. every authenticated
+  # request, via `current_user` reading `session[:user_id]`) - each of those
+  # uses this request's own `session_options` unless told otherwise, which
+  # would silently overwrite AuthController's one-off extended-expiry cookie
+  # with a plain no-expiry one on the very next request after login. Session
+  # data (unlike `session_options`) persists across requests for
+  # `cookie_store`, so stashing the "remembered" choice there and reapplying
+  # it here on every request keeps the extended expiry for the session's
+  # full lifetime instead of just its first response.
+  def extend_session_if_remembered
+    request.session_options[:expire_after] = REMEMBER_ME_DURATION if session[:remember_me]
   end
 
   def current_user

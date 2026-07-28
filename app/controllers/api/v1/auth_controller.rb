@@ -20,7 +20,7 @@ module Api
       def login
         user = User.find_by(email: login_params[:email])
         if user&.authenticate(login_params[:password])
-          log_in(user)
+          log_in(user, remember: ActiveModel::Type::Boolean.new.cast(login_params[:remember_me]))
           render json: user_json(user), status: :ok
         else
           render json: { error: "Invalid email or password" }, status: :unauthorized
@@ -42,9 +42,18 @@ module Api
 
       private
 
-      def log_in(user)
+      # Without `remember`, the session cookie carries no Max-Age/Expires and
+      # the browser drops it on close (Rails' default for `cookie_store` with
+      # no `expire_after` configured). `session[:remember_me]` persists the
+      # choice for the rest of this login session; BaseController's
+      # `extend_session_if_remembered` reapplies the extended expiry from it
+      # on every subsequent request (see its comment for why that's needed),
+      # so it's called here too to cover this first response.
+      def log_in(user, remember: false)
         reset_session
         session[:user_id] = user.id
+        session[:remember_me] = remember
+        extend_session_if_remembered
         # The CSRF token is tied to the session; reset_session just rotated
         # the session, so the cookie needs refreshing to match it.
         set_csrf_cookie
@@ -55,7 +64,7 @@ module Api
       end
 
       def login_params
-        params.require(:user).permit(:email, :password)
+        params.require(:user).permit(:email, :password, :remember_me)
       end
     end
   end

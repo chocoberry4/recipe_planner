@@ -123,7 +123,7 @@ const themeOptions = [
 const homeViewOptions = [
   { value: 'random_recipes', label: 'Recipe ideas' },
   { value: 'weekly_planner', label: 'This week\'s planner' },
-  { value: 'today', label: "Today's meals" },
+  { value: 'monthly', label: 'This month\'s planner' },
 ]
 const mealTypeOptions = [
   { field: 'show_breakfast', label: 'Breakfast' },

@@ -27,6 +27,11 @@
         />
       </label>
 
+      <label class="flex items-center gap-2 text-sm text-ink/80">
+        <input v-model="rememberMe" type="checkbox" class="rounded border-line text-accent focus:ring-accent/20" />
+        Remember me
+      </label>
+
       <button
         type="submit"
         :disabled="submitting"
@@ -51,6 +56,7 @@ import { useAuthStore } from '../stores/auth'
 
 const email = ref('')
 const password = ref('')
+const rememberMe = ref(false)
 const error = ref(null)
 const submitting = ref(false)
 
@@ -61,7 +67,7 @@ async function handleSubmit() {
   submitting.value = true
   error.value = null
 
-  const result = await auth.login({ email: email.value, password: password.value })
+  const result = await auth.login({ email: email.value, password: password.value, rememberMe: rememberMe.value })
 
   submitting.value = false
 

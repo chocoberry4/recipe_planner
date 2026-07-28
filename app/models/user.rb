@@ -9,5 +9,9 @@ class User < ApplicationRecord
   has_many :pinned_tags, through: :tag_pins, source: :tag
   has_many :tandoor_imports, dependent: :destroy
 
-  enum :home_view, { random_recipes: 0, weekly_planner: 1, today: 2 }
+  # `today` (single-day homepage widget) was pulled from Settings/Home.vue -
+  # see the 2026-07-28 follow-up in CLAUDE.md - but the mapping stays so any
+  # already-persisted `home_view: 2` row still reads back cleanly instead of
+  # raising on an unrecognized integer.
+  enum :home_view, { random_recipes: 0, weekly_planner: 1, today: 2, monthly: 3 }
 end

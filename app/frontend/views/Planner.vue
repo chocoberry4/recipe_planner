@@ -34,10 +34,18 @@
     <div
       v-for="day in weekDaysList"
       :key="toISODate(day)"
-      class="min-w-0 rounded-xl border border-line bg-white p-3"
-      :class="{ 'border-accent': isToday(day) }"
+      class="min-w-0 rounded-xl border bg-white p-3"
+      :class="isToday(day) ? 'border-accent' : 'border-line'"
     >
-      <p class="text-xs font-semibold uppercase tracking-wide text-ink/50">{{ weekdayLabel(day) }}</p>
+      <div class="flex items-center gap-2">
+        <p class="text-xs font-semibold uppercase tracking-wide text-ink/50">{{ weekdayLabel(day) }}</p>
+        <span
+          v-if="isToday(day)"
+          class="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
+        >
+          Today
+        </span>
+      </div>
       <p class="font-display text-base font-semibold text-ink">{{ dayNumberLabel(day) }}</p>
 
       <div
@@ -142,7 +150,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useMealPlansStore } from '../stores/mealPlans'
 import { useAuthStore } from '../stores/auth'
 import { startOfWeek, addDays, addMonths, toISODate, weekDays as weekDaysFn, monthGridWeeks, weekRangeLabel, monthLabel } from '../lib/calendar'
-import { visibleMealTypes, groupPlansBySlot, slotLabel, weekdayLabel, dayNumberLabel } from '../lib/mealPlanSlots'
+import { visibleMealTypes, groupPlansBySlot, groupPlansByDate, MAX_MONTH_CELL_PLANS, slotLabel, weekdayLabel, dayNumberLabel } from '../lib/mealPlanSlots'
 import RecipePicker from '../components/RecipePicker.vue'
 
 const WEEKDAY_LABELS = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
@@ -182,25 +190,7 @@ const recipeOptions = computed(() =>
 
 const plansByKey = computed(() => groupPlansBySlot(mealPlans.items))
 
-// The month grid shows dish names directly rather than just a count, so a
-// day's plans need to be ordered meal-type-first (not raw API/array order)
-// for that list to read naturally - same idea as groupPlansBySlot but keyed
-// by date alone since a month cell isn't broken out by slot.
-const MEAL_TYPE_ORDER = [ 'breakfast', 'lunch', 'dinner', 'snack' ]
-const MAX_MONTH_CELL_PLANS = 3
-
-const plansByDate = computed(() => {
-  const map = new Map()
-  for (const plan of mealPlans.items) {
-    if (!MEAL_TYPES.value.includes(plan.meal_type)) continue
-    if (!map.has(plan.date)) map.set(plan.date, [])
-    map.get(plan.date).push(plan)
-  }
-  for (const list of map.values()) {
-    list.sort((a, b) => MEAL_TYPE_ORDER.indexOf(a.meal_type) - MEAL_TYPE_ORDER.indexOf(b.meal_type) || a.position - b.position)
-  }
-  return map
-})
+const plansByDate = computed(() => groupPlansByDate(mealPlans.items, MEAL_TYPES.value))
 
 function plansFor(day, slot) {
   return plansByKey.value.get(`${toISODate(day)}|${slot}`) || []

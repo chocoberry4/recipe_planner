@@ -45,8 +45,8 @@ export const useAuthStore = defineStore('auth', {
       return result
     },
 
-    async login({ email, password }) {
-      const result = await submitAuth('/api/v1/login', { user: { email, password } })
+    async login({ email, password, rememberMe }) {
+      const result = await submitAuth('/api/v1/login', { user: { email, password, remember_me: rememberMe } })
       if (result.ok) {
         this.user = result.user
         this.checked = true

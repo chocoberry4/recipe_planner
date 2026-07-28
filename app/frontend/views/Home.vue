@@ -11,10 +11,10 @@
     <p v-if="!auth.checked" class="mt-8 text-ink/50">Loading...</p>
 
     <div v-else-if="auth.isLoggedIn">
-      <div v-if="summaryDays.length" class="mt-10 text-left">
+      <div v-if="summaryDays.length || monthGridDays.length" class="mt-10 text-left">
         <div class="flex items-center justify-between">
           <h2 class="font-display text-lg font-semibold text-ink">
-            {{ auth.user.home_view === 'today' ? "Today's meals" : "This week" }}
+            {{ auth.user.home_view === 'monthly' ? "This month" : "This week" }}
           </h2>
           <router-link to="/planner" class="text-sm font-medium text-accent hover:text-accent-dark">
             Open planner &rarr;
@@ -22,13 +22,59 @@
         </div>
 
         <p v-if="plansLoading" class="mt-4 text-ink/50">Loading...</p>
-        <div v-else class="mt-4 grid gap-3" :class="summaryDays.length > 1 ? 'sm:grid-cols-3' : ''">
+
+        <div
+          v-else-if="auth.user.home_view === 'monthly'"
+          class="mt-6 grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-line bg-line"
+        >
+          <div
+            v-for="label in WEEKDAY_LABELS"
+            :key="label"
+            class="bg-cream px-2 py-1 text-center text-xs font-semibold uppercase tracking-wide text-ink/50"
+          >
+            {{ label }}
+          </div>
+          <div
+            v-for="day in monthGridDays"
+            :key="toISODate(day)"
+            class="flex min-h-20 flex-col items-start gap-1 bg-white p-2 text-left"
+            :class="isCurrentMonth(day) ? 'text-ink' : 'text-ink/30'"
+          >
+            <span class="text-sm font-medium" :class="{ 'rounded-full bg-accent px-1.5 text-white': isToday(day) }">
+              {{ day.getDate() }}
+            </span>
+            <div v-if="plansForDay(day).length" class="w-full space-y-0.5">
+              <p
+                v-for="plan in plansForDay(day).slice(0, MAX_MONTH_CELL_PLANS)"
+                :key="plan.id"
+                class="w-full truncate text-[11px] leading-tight text-ink/70"
+                :class="{ italic: !plan.recipe }"
+              >
+                {{ plan.recipe ? plan.recipe.title : plan.label }}
+              </p>
+              <p v-if="plansForDay(day).length > MAX_MONTH_CELL_PLANS" class="text-[11px] leading-tight text-ink/40">
+                +{{ plansForDay(day).length - MAX_MONTH_CELL_PLANS }} more
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="mt-4 grid gap-3 sm:grid-cols-3">
           <div
             v-for="day in summaryDays"
             :key="toISODate(day)"
-            class="min-w-0 rounded-xl border border-line bg-white p-3 text-left"
+            class="min-w-0 rounded-xl border bg-white p-3 text-left"
+            :class="isToday(day) ? 'border-accent' : 'border-line'"
           >
-            <p class="text-xs font-semibold uppercase tracking-wide text-ink/50">{{ weekdayLabel(day) }}</p>
+            <div class="flex items-center gap-2">
+              <p class="text-xs font-semibold uppercase tracking-wide text-ink/50">{{ weekdayLabel(day) }}</p>
+              <span
+                v-if="isToday(day)"
+                class="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
+              >
+                Today
+              </span>
+            </div>
             <p class="font-display text-base font-semibold text-ink">{{ dayNumberLabel(day) }}</p>
 
             <div v-for="slot in visibleMealTypesList" :key="slot" class="mt-3">
@@ -103,8 +149,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useMealPlansStore } from '../stores/mealPlans'
-import { startOfWeek, toISODate, weekDays as weekDaysFn } from '../lib/calendar'
-import { visibleMealTypes, groupPlansBySlot, slotLabel, weekdayLabel, dayNumberLabel } from '../lib/mealPlanSlots'
+import { startOfWeek, toISODate, weekDays as weekDaysFn, monthGridWeeks } from '../lib/calendar'
+import { visibleMealTypes, groupPlansBySlot, groupPlansByDate, MAX_MONTH_CELL_PLANS, slotLabel, weekdayLabel, dayNumberLabel } from '../lib/mealPlanSlots'
+
+const WEEKDAY_LABELS = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ]
 
 const auth = useAuthStore()
 const mealPlans = useMealPlansStore()
@@ -126,27 +174,44 @@ function sampleRandom(list, count) {
 
 const visibleMealTypesList = computed(() => visibleMealTypes(auth.user))
 
-// Only "today" and "weekly_planner" (the Settings-configurable homepage
-// modes) show anything here - "random_recipes" (the default) leaves this
+// Only "weekly_planner" and "monthly" (the Settings-configurable homepage
+// modes) show anything here - "random_recipes" (the default) leaves both
 // empty so the existing recipe-ideas grid renders instead.
 const summaryDays = computed(() => {
-  if (auth.user?.home_view === 'today') return [ new Date() ]
   if (auth.user?.home_view === 'weekly_planner') return weekDaysFn(startOfWeek(new Date()))
   return []
 })
 
+const monthGridDays = computed(() => {
+  if (auth.user?.home_view !== 'monthly') return []
+  return monthGridWeeks(new Date()).flat()
+})
+
 const plansByKey = computed(() => groupPlansBySlot(mealPlans.items))
+const plansByDate = computed(() => groupPlansByDate(mealPlans.items, visibleMealTypesList.value))
 
 function plansFor(day, slot) {
   return plansByKey.value.get(`${toISODate(day)}|${slot}`) || []
+}
+
+function plansForDay(day) {
+  return plansByDate.value.get(toISODate(day)) || []
+}
+
+function isToday(day) {
+  return toISODate(day) === toISODate(new Date())
+}
+
+function isCurrentMonth(day) {
+  return day.getMonth() === new Date().getMonth()
 }
 
 onMounted(async () => {
   if (!auth.checked) await auth.fetchCurrentUser()
   if (!auth.isLoggedIn) return
 
-  if (summaryDays.value.length) {
-    const days = summaryDays.value
+  if (summaryDays.value.length || monthGridDays.value.length) {
+    const days = summaryDays.value.length ? summaryDays.value : monthGridDays.value
     await mealPlans.fetchRange(toISODate(days[0]), toISODate(days[days.length - 1]))
     plansLoading.value = false
     return
