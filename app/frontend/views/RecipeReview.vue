@@ -169,7 +169,16 @@
     </section>
 
     <section class="mt-8 border-t border-line pt-6">
-      <h2 class="font-display text-lg font-semibold text-sage">Ingredients</h2>
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="font-display text-lg font-semibold text-sage">Ingredients</h2>
+        <button
+          type="button"
+          class="rounded-full border border-line px-3.5 py-1.5 text-sm text-ink hover:border-accent hover:text-accent transition-colors cursor-pointer"
+          @click="showReorganise = true"
+        >
+          Reorganise
+        </button>
+      </div>
 
       <div v-for="group in groups" :key="group._key" class="mt-4 rounded-xl border border-line bg-white p-4">
         <div class="flex items-center gap-2">
@@ -235,6 +244,23 @@
       >
         + Add ingredient group
       </button>
+
+      <ReorganiseIngredientsModal
+        :open="showReorganise"
+        :groups="groups"
+        :ingredients="ingredients"
+        @apply="applyReorganise"
+        @cancel="showReorganise = false"
+      />
+
+      <ReorganiseStepsModal
+        :open="showReorganiseSteps"
+        :instructions="instructions"
+        :assignments="assignments"
+        :ingredients="assignableIngredients"
+        @apply="applyStepReorganise"
+        @cancel="showReorganiseSteps = false"
+      />
     </section>
 
     <section class="mt-8 border-t border-line pt-6">
@@ -254,7 +280,26 @@
     </section>
 
     <section class="mt-8 space-y-5 border-t border-line pt-6">
-      <h2 class="font-display text-lg font-semibold text-sage">Steps</h2>
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="font-display text-lg font-semibold text-sage">Steps</h2>
+        <div class="flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            class="rounded-full bg-accent px-3.5 py-1.5 text-sm text-white hover:bg-accent-dark transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="autosorting || saving"
+            @click="showAutosortConfirm = true"
+          >
+            {{ autosorting ? 'Reorganising...' : 'Auto-reorganise' }}
+          </button>
+          <button
+            type="button"
+            class="rounded-full border border-line px-3.5 py-1.5 text-sm text-ink hover:border-accent hover:text-accent transition-colors cursor-pointer"
+            @click="showReorganiseSteps = true"
+          >
+            Reorganise manually
+          </button>
+        </div>
+      </div>
       <div
         v-for="(instruction, index) in instructions"
         :key="instruction._key"
@@ -413,6 +458,15 @@
     </div>
 
     <ConfirmDialog
+      :open="showAutosortConfirm"
+      title="Auto-reorganise ingredients?"
+      message="This saves your edits, then re-matches every ingredient to the step whose text mentions it. Your current ingredient-to-step assignments will be replaced."
+      confirm-label="Auto-reorganise"
+      @confirm="handleAutosort"
+      @cancel="showAutosortConfirm = false"
+    />
+
+    <ConfirmDialog
       :open="showDeleteConfirm"
       title="Delete this recipe?"
       message="This can't be undone."
@@ -468,6 +522,8 @@ import { useRecipesStore } from '../stores/recipes'
 import IngredientCombobox from '../components/IngredientCombobox.vue'
 import IngredientRow from '../components/IngredientRow.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
+import ReorganiseIngredientsModal from '../components/ReorganiseIngredientsModal.vue'
+import ReorganiseStepsModal from '../components/ReorganiseStepsModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -690,6 +746,30 @@ function ingredientsInGroup(groupKey) {
   return ingredients.value.filter((ri) => ri.groupId === groupKey)
 }
 
+const showReorganise = ref(false)
+
+// Takes the modal's arrangement - [{ key, items }] with the ungrouped
+// section (key null) last - and applies it: group order follows the sections,
+// each ingredient takes its section's group, and the flat `ingredients`
+// array is rebuilt in section order (ingredientsInGroup/buildPayload derive
+// every position from array order). Anything the modal somehow didn't list
+// is kept at the end rather than dropped.
+function applyReorganise(arrangement) {
+  const groupsByKey = new Map(groups.value.map((g) => [ g._key, g ]))
+  groups.value = arrangement.filter((s) => s.key !== null).map((s) => groupsByKey.get(s.key)).filter(Boolean)
+
+  const placed = new Set()
+  const reordered = arrangement.flatMap((section) =>
+    section.items.map((ri) => {
+      ri.groupId = section.key
+      placed.add(ri._key)
+      return ri
+    })
+  )
+  ingredients.value = [ ...reordered, ...ingredients.value.filter((ri) => !placed.has(ri._key)) ]
+  showReorganise.value = false
+}
+
 function addGroup() {
   groups.value.push({ _key: nextKey(), id: null, name: '' })
 }
@@ -774,6 +854,20 @@ const unresolvedOptions = computed(() =>
     .filter((ri) => !assignedIds.value.has(ri.id))
     .map((ri) => ({ id: ri.id, label: ingredientLabel(ri) }))
 )
+
+const showReorganiseSteps = ref(false)
+
+// Takes the modal's [{ instructionId, ingredientIds }] and writes it straight
+// into the local `assignments` draft (persisted by the normal Save, like
+// every other assignment edit). The modal covers every assignable ingredient
+// exactly once across its sections, so replacing each step's list wholesale
+// keeps the one-step-per-ingredient rule.
+function applyStepReorganise(arrangement) {
+  arrangement.forEach(({ instructionId, ingredientIds }) => {
+    assignments[instructionId] = ingredientIds
+  })
+  showReorganiseSteps.value = false
+}
 
 function assignedFor(instructionId) {
   return (assignments[instructionId] || []).map((id) => ingredientsById.value.get(id)).filter(Boolean)
@@ -992,6 +1086,37 @@ async function confirmDelete() {
   showDeleteConfirm.value = false
   const result = await recipes.destroy(route.params.id)
   if (result.ok) router.push('/recipes')
+}
+
+const showAutosortConfirm = ref(false)
+const autosorting = ref(false)
+
+// Saves the page's current edits first (the autosorter works from what's
+// saved, so split/reworded steps must be persisted before it can see them),
+// then asks the server to re-match every ingredient to its step.
+async function handleAutosort() {
+  showAutosortConfirm.value = false
+  commitTagInput()
+  autosorting.value = true
+  saveError.value = null
+  saveMessage.value = null
+
+  const saved = await recipes.update(route.params.id, buildPayload())
+  if (!saved.ok) {
+    autosorting.value = false
+    saveError.value = (saved.errors || []).join(', ') || 'Failed to save.'
+    return
+  }
+
+  const sorted = await recipes.autosort(route.params.id)
+  autosorting.value = false
+  if (sorted.ok) {
+    seedFromRecipe(sorted.recipe)
+    saveMessage.value = 'Saved and auto-reorganised.'
+  } else {
+    seedFromRecipe(saved.recipe)
+    saveError.value = sorted.error || 'Failed to auto-reorganise.'
+  }
 }
 
 async function handleSave() {

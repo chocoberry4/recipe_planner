@@ -6,6 +6,7 @@ Rails.application.routes.draw do
         resource :instruction_ingredients, only: :update
         resources :image_candidates, only: :index, controller: "recipe_image_candidates"
         resource :image, only: %i[create destroy], controller: "recipe_images"
+        resource :autosort, only: :create, controller: "recipe_autosorts"
       end
       resources :ingredients
       resources :meal_plans, only: %i[index create update destroy]

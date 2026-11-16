@@ -143,6 +143,28 @@ export const useRecipesStore = defineStore('recipes', {
       return { ok: true, imageUrls: body.image_urls || [] }
     },
 
+    // Re-runs the server's autosorter over the saved steps/ingredients,
+    // replacing every step assignment. Callers should persist pending edits
+    // first - it works from what's saved, not the local draft.
+    async autosort(recipeId) {
+      try {
+        const response = await fetch(`/api/v1/recipes/${recipeId}/autosort`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'X-CSRF-Token': csrfToken() },
+        })
+        const body = await response.json().catch(() => ({}))
+
+        if (response.ok) {
+          this.current = body
+          return { ok: true, recipe: body }
+        }
+        return { ok: false, error: body.error || 'Something went wrong' }
+      } catch {
+        return { ok: false, error: 'Network error - please try again.' }
+      }
+    },
+
     async saveAssignments(recipeId, assignments) {
       const response = await fetch(`/api/v1/recipes/${recipeId}/instruction_ingredients`, {
         method: 'PATCH',
