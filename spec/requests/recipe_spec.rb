@@ -186,6 +186,27 @@ RSpec.describe "Recipes", type: :request do
       expect(recipe.reload.duration_minutes).to eq(30)
     end
 
+    it "updates servings" do
+      recipe = create(:recipe)
+      log_in_as(recipe.user)
+
+      patch "/api/v1/recipes/#{recipe.id}", params: { recipe: { servings: 6 } }
+
+      expect(response).to have_http_status(:ok)
+      expect(recipe.reload.servings).to eq(6)
+      expect(JSON.parse(response.body)["servings"]).to eq(6)
+    end
+
+    it "rejects zero servings" do
+      recipe = create(:recipe)
+      log_in_as(recipe.user)
+
+      patch "/api/v1/recipes/#{recipe.id}", params: { recipe: { servings: 0 } }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(recipe.reload.servings).to be_nil
+    end
+
     it "updates source_url" do
       recipe = create(:recipe)
       log_in_as(recipe.user)

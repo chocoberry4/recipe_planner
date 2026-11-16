@@ -3,7 +3,7 @@
 # scrapers) — returns nil if no usable Recipe node is found, signalling the caller
 # to fall back to manual paste.
 class JsonLdRecipeExtractor
-  Result = Struct.new(:title, :description, :ingredient_lines, :instructions, :image_urls, :duration_minutes, keyword_init: true)
+  Result = Struct.new(:title, :description, :ingredient_lines, :instructions, :image_urls, :duration_minutes, :servings, keyword_init: true)
   InstructionEntry = Struct.new(:text, :group_name, :image_url, keyword_init: true)
 
   # A row of candidate images is meant to be a handful of options to pick
@@ -29,11 +29,23 @@ class JsonLdRecipeExtractor
       ingredient_lines: Array(node["recipeIngredient"]).map { |line| clean_text(line) },
       instructions: extract_instructions(node["recipeInstructions"]),
       image_urls: extract_images(node["image"]),
-      duration_minutes: extract_duration_minutes(node)
+      duration_minutes: extract_duration_minutes(node),
+      servings: extract_servings(node["recipeYield"])
     )
   end
 
   private
+
+  # schema.org's `recipeYield` is free-form and polymorphic: 4, "4", "4 servings",
+  # "Serves 4-6", or an array mixing those. Takes the first whole number
+  # found (a range yields its low end); no number at all yields nil.
+  def extract_servings(raw)
+    Array(raw).each do |item|
+      number = item.to_s[/\d+/]&.to_i
+      return number if number&.positive?
+    end
+    nil
+  end
 
   # Prefers the site's own totalTime; falls back to summing prepTime + cookTime
   # when totalTime isn't given, since some sites only publish those two.

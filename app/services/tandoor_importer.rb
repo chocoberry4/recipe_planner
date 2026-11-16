@@ -138,7 +138,8 @@ class TandoorImporter
         title: data["name"],
         description: data["description"].presence || "Imported from Tandoor.",
         source_url: data["source_url"],
-        duration_minutes: total_minutes(data)
+        duration_minutes: total_minutes(data),
+        servings: data["servings"].to_i.positive? ? data["servings"].to_i : nil
       )
 
       recipe.tags = tag_names(data).map { |name| Tag.find_or_create_by!(name: name) }

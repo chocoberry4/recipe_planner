@@ -17,7 +17,7 @@ module Api
       # ignore whatever `includes` already loaded.
       EAGER_LOAD = { recipe_ingredient_groups: {}, recipe_ingredients: :ingredient, instructions: :instruction_ingredients, tags: {}, image_attachment: :blob }.freeze
 
-      attributes :id, :title, :description, :image_url, :user_id, :source_url, :duration_minutes,
+      attributes :id, :title, :description, :image_url, :user_id, :source_url, :duration_minutes, :servings,
                  :recipe_ingredient_groups, :ingredients, :instructions, :tags, :created_at, :updated_at
 
       # An uploaded file (Recipe#image) wins over the pasted-URL column

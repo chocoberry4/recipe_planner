@@ -52,7 +52,7 @@
                 @change="toggleChecked(ri.id)"
               />
               <span :class="{ 'text-ink/40 line-through': checkedIngredientIds.has(ri.id) }">
-                {{ ingredientLabel(ri) }}<span v-if="ri.preparation">, {{ ri.preparation }}</span>
+                {{ ingredientLabel(ri, factor) }}<span v-if="ri.preparation">, {{ ri.preparation }}</span>
               </span>
             </label>
           </li>
@@ -90,7 +90,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipesStore } from '../stores/recipes'
-import { ingredientsById as buildIngredientsById, stepIngredients as stepIngredientsFor, ingredientLabel } from '../lib/recipeIngredients'
+import { ingredientsById as buildIngredientsById, stepIngredients as stepIngredientsFor, ingredientLabel, scaleFactor } from '../lib/recipeIngredients'
 
 const MIN_INSTRUCTION_FONT_PX = 18
 
@@ -110,6 +110,10 @@ const steps = computed(() => recipe.value?.instructions || [])
 const currentStep = computed(() => steps.value[currentIndex.value])
 const isFirst = computed(() => currentIndex.value === 0)
 const isLast = computed(() => currentIndex.value === steps.value.length - 1)
+
+// Servings chosen on the detail page arrive as ?servings=N; scales the
+// ingredient amounts shown here the same way.
+const factor = computed(() => scaleFactor(recipe.value?.servings, route.query.servings))
 
 const ingredientsById = computed(() => recipe.value ? buildIngredientsById(recipe.value) : new Map())
 const currentStepIngredients = computed(() => currentStep.value ? stepIngredientsFor(ingredientsById.value, currentStep.value) : [])

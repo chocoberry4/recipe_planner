@@ -40,4 +40,5 @@ class Recipe < ApplicationRecord
 
   validates :title, presence: true
   validates :description, presence: true
+  validates :servings, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
 end

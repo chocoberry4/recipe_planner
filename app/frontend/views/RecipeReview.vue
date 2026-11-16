@@ -45,6 +45,17 @@
         </div>
       </div>
       <label class="block">
+        <span class="text-sm font-medium text-ink/80">Recommended servings</span>
+        <input
+          v-model.number="servings"
+          type="number"
+          min="1"
+          step="1"
+          placeholder="e.g. 4"
+          class="mt-1 block w-28 rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+        />
+      </label>
+      <label class="block">
         <span class="text-sm font-medium text-ink/80">Source URL</span>
         <input
           v-model="sourceUrl"
@@ -493,6 +504,7 @@ const durationMinutes = computed(() => {
   const mins = isBlankDurationField(durationMins.value) ? 0 : durationMins.value
   return hours * 60 + mins
 })
+const servings = ref(null)
 const sourceUrl = ref('')
 const tags = ref([])
 const tagInput = ref('')
@@ -536,6 +548,7 @@ function seedFromRecipe(data) {
   description.value = data.description
   durationHours.value = data.duration_minutes != null ? Math.floor(data.duration_minutes / 60) : null
   durationMins.value = data.duration_minutes != null ? data.duration_minutes % 60 : null
+  servings.value = data.servings ?? null
   sourceUrl.value = data.source_url || ''
   tags.value = data.tags.map((tag) => tag.name)
   imageUrl.value = data.image_url
@@ -867,6 +880,7 @@ function buildPayload() {
     title: title.value,
     description: description.value,
     duration_minutes: durationMinutes.value,
+    servings: servings.value === '' ? null : servings.value,
     source_url: sourceUrl.value || null,
     tag_names: tags.value,
     recipe_ingredient_groups: [

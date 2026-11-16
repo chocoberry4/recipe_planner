@@ -28,7 +28,7 @@ class RecipeUpdater
       # attached), so exactly one of the two is ever the active source.
       @recipe.image.purge if @params.key?(:image_url) && @recipe.image.attached?
 
-      @recipe.update!(@params.slice(:title, :description, :image_url, :duration_minutes, :source_url))
+      @recipe.update!(@params.slice(:title, :description, :image_url, :duration_minutes, :servings, :source_url))
 
       upsert_groups(@params[:recipe_ingredient_groups] || [])
       upsert_recipe_ingredients(@params[:ingredients] || [], group: nil)

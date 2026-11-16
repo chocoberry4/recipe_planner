@@ -113,6 +113,29 @@ RSpec.describe JsonLdRecipeExtractor do
     expect(result.instructions.first.image_url).to eq("https://example.com/marinade.jpg")
   end
 
+  describe "servings from recipeYield" do
+    def servings_for(yield_value)
+      html = html_with_json_ld("@type" => "Recipe", "name" => "Tacos", "recipeIngredient" => [], "recipeInstructions" => [], "recipeYield" => yield_value)
+      described_class.extract(html).servings
+    end
+
+    it "reads a bare number, a numeric string, and a phrase" do
+      expect(servings_for(4)).to eq(4)
+      expect(servings_for("6")).to eq(6)
+      expect(servings_for("Serves 8 people")).to eq(8)
+    end
+
+    it "takes the first number from an array or a range" do
+      expect(servings_for([ "4", "4 servings" ])).to eq(4)
+      expect(servings_for("4-6 servings")).to eq(4)
+    end
+
+    it "is nil when absent or unparseable" do
+      expect(servings_for(nil)).to be_nil
+      expect(servings_for("a crowd")).to be_nil
+    end
+  end
+
   it "extracts duration_minutes from totalTime" do
     html = html_with_json_ld(
       "@type" => "Recipe",

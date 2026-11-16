@@ -30,7 +30,7 @@
       <div class="flex shrink-0 gap-2 text-sm">
         <router-link
           v-if="recipe.instructions.length"
-          :to="`/recipes/${recipe.id}/steps`"
+          :to="stepModeLink"
           class="rounded-full bg-accent px-3.5 py-1.5 text-white hover:bg-accent-dark transition-colors"
         >
           Step mode
@@ -64,12 +64,43 @@
       v-if="recipe.recipe_ingredient_groups.length || recipe.ingredients.length"
       class="mt-8 border-t border-line pt-6"
     >
-      <h2 class="font-display text-lg font-semibold text-sage">Ingredients</h2>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="font-display text-lg font-semibold text-sage">Ingredients</h2>
+        <div v-if="recipe.servings" class="flex items-center gap-2 text-sm text-ink/70">
+          <span>Servings</span>
+          <button
+            type="button"
+            aria-label="Fewer servings"
+            class="flex h-7 w-7 items-center justify-center rounded-full border border-line hover:border-accent hover:text-accent transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+            :disabled="desiredServings <= 1"
+            @click="adjustServings(-1)"
+          >&minus;</button>
+          <input
+            v-model.number="desiredServings"
+            type="number"
+            min="1"
+            aria-label="Servings"
+            class="w-14 rounded-lg border border-line bg-white px-2 py-1 text-center text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
+          <button
+            type="button"
+            aria-label="More servings"
+            class="flex h-7 w-7 items-center justify-center rounded-full border border-line hover:border-accent hover:text-accent transition-colors cursor-pointer"
+            @click="adjustServings(1)"
+          >+</button>
+          <button
+            v-if="factor !== 1"
+            type="button"
+            class="text-xs text-accent hover:underline cursor-pointer"
+            @click="desiredServings = recipe.servings"
+          >Reset (recipe makes {{ recipe.servings }})</button>
+        </div>
+      </div>
 
       <div v-for="group in recipe.recipe_ingredient_groups" :key="group.id" class="mt-4">
         <h3 class="text-sm font-semibold text-ink/70">{{ group.name }}</h3>
         <ul class="mt-2 space-y-1.5 text-ink/85">
-          <li v-for="ri in group.recipe_ingredients" :key="ri.id">
+          <li v-for="ri in group.recipe_ingredients" :key="ri.id" class="flex items-start gap-3">
             <label class="flex cursor-pointer items-start gap-2">
               <input
                 type="checkbox"
@@ -78,15 +109,22 @@
                 @change="toggleChecked(ri.id)"
               />
               <span :class="{ 'text-ink/40 line-through': checkedIngredientIds.has(ri.id) }">
-                {{ ri.quantity }} {{ ri.unit }} {{ ri.name }}<span v-if="ri.preparation">, {{ ri.preparation }}</span>
+                {{ ingredientLabel(ri, factor) }}<span v-if="ri.preparation">, {{ ri.preparation }}</span>
               </span>
             </label>
+            <a
+              :href="ocadoSearchUrl(ri)"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="shrink-0 rounded-full border border-line px-2.5 py-0.5 text-xs text-ink/60 hover:border-accent hover:text-accent transition-colors"
+              :aria-label="`Buy ${ri.name} on Ocado`"
+            >Buy now</a>
           </li>
         </ul>
       </div>
 
       <ul v-if="recipe.ingredients.length" class="mt-4 space-y-1.5 text-ink/85">
-        <li v-for="ri in recipe.ingredients" :key="ri.id">
+        <li v-for="ri in recipe.ingredients" :key="ri.id" class="flex items-start gap-3">
           <label class="flex cursor-pointer items-start gap-2">
             <input
               type="checkbox"
@@ -95,9 +133,16 @@
               @change="toggleChecked(ri.id)"
             />
             <span :class="{ 'text-ink/40 line-through': checkedIngredientIds.has(ri.id) }">
-              {{ ri.quantity }} {{ ri.unit }} {{ ri.name }}<span v-if="ri.preparation">, {{ ri.preparation }}</span>
+              {{ ingredientLabel(ri, factor) }}<span v-if="ri.preparation">, {{ ri.preparation }}</span>
             </span>
           </label>
+          <a
+            :href="ocadoSearchUrl(ri)"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="shrink-0 rounded-full border border-line px-2.5 py-0.5 text-xs text-ink/60 hover:border-accent hover:text-accent transition-colors"
+            :aria-label="`Buy ${ri.name} on Ocado`"
+          >Buy now</a>
         </li>
       </ul>
     </section>
@@ -111,7 +156,7 @@
           </span>
           <div>
             <p v-if="stepIngredients(step).length" class="text-sm text-ink/60">
-              {{ stepIngredients(step).map(ingredientLabel).join(', ') }}
+              {{ stepIngredients(step).map((ri) => ingredientLabel(ri, factor)).join(', ') }}
             </p>
             <span class="text-ink/85">{{ step.description }}</span>
             <img
@@ -151,7 +196,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipesStore } from '../stores/recipes'
 import { useAuthStore } from '../stores/auth'
-import { ingredientsById as buildIngredientsById, stepIngredients as stepIngredientsFor, ingredientLabel } from '../lib/recipeIngredients'
+import { ingredientsById as buildIngredientsById, stepIngredients as stepIngredientsFor, ingredientLabel, scaleFactor, ocadoSearchUrl } from '../lib/recipeIngredients'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 const route = useRoute()
@@ -164,6 +209,23 @@ const error = ref(null)
 const showDeleteConfirm = ref(false)
 const recipe = computed(() => recipes.current)
 const isOwner = computed(() => auth.isLoggedIn && recipe.value?.user_id === auth.user.id)
+
+// Viewing-only scaling: the servings the viewer wants, seeded from the
+// recipe's recommended servings once it loads. Never saved - it just
+// multiplies the displayed quantities.
+const desiredServings = ref(null)
+const factor = computed(() => scaleFactor(recipe.value?.servings, desiredServings.value))
+
+function adjustServings(delta) {
+  desiredServings.value = Math.max(1, (Number(desiredServings.value) || 1) + delta)
+}
+
+// Carries a non-default servings choice into Step mode so its ingredient
+// amounts match what was being viewed here.
+const stepModeLink = computed(() => ({
+  path: `/recipes/${recipe.value.id}/steps`,
+  query: factor.value !== 1 ? { servings: desiredServings.value } : {}
+}))
 
 // Prep-checklist state only - not persisted, resets on reload.
 const checkedIngredientIds = ref(new Set())
@@ -203,6 +265,7 @@ const finishTime = computed(() => {
 onMounted(async () => {
   const result = await recipes.fetchOne(route.params.id)
   if (!result.ok) error.value = 'Recipe not found'
+  else desiredServings.value = recipes.current?.servings ?? null
   loading.value = false
 })
 
