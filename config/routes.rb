@@ -10,6 +10,9 @@ Rails.application.routes.draw do
       end
       resources :ingredients
       resources :meal_plans, only: %i[index create update destroy]
+      resources :shopping_items, only: %i[index create update destroy] do
+        delete :checked, action: :destroy_checked, on: :collection
+      end
       resource :pinned_tags, only: %i[show update]
       resource :user_preferences, only: %i[show update]
       resources :tandoor_imports, only: %i[create show]

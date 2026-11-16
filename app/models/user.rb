@@ -5,6 +5,7 @@ class User < ApplicationRecord
   has_many :recipes
   has_many :meal_plans, dependent: :destroy
   has_many :shopping_lists
+  has_many :shopping_items, dependent: :destroy
   has_many :tag_pins, dependent: :destroy
   has_many :pinned_tags, through: :tag_pins, source: :tag
   has_many :tandoor_imports, dependent: :destroy

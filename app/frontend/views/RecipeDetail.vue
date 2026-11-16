@@ -119,6 +119,13 @@
               class="shrink-0 rounded-full border border-line px-2.5 py-0.5 text-xs text-ink/60 hover:border-accent hover:text-accent transition-colors"
               :aria-label="`Buy ${ri.name} on Ocado`"
             >Buy now</a>
+            <button
+              type="button"
+              class="shrink-0 rounded-full border px-2.5 py-0.5 text-xs transition-colors cursor-pointer"
+              :class="addedIds.has(ri.id) ? 'border-accent text-accent' : 'border-line text-ink/60 hover:border-accent hover:text-accent'"
+              :aria-label="`Add ${ri.name} to shopping list`"
+              @click="addToShoppingList(ri)"
+            >{{ addedIds.has(ri.id) ? 'Added' : 'Add to list' }}</button>
           </li>
         </ul>
       </div>
@@ -143,6 +150,13 @@
             class="shrink-0 rounded-full border border-line px-2.5 py-0.5 text-xs text-ink/60 hover:border-accent hover:text-accent transition-colors"
             :aria-label="`Buy ${ri.name} on Ocado`"
           >Buy now</a>
+          <button
+            type="button"
+            class="shrink-0 rounded-full border px-2.5 py-0.5 text-xs transition-colors cursor-pointer"
+            :class="addedIds.has(ri.id) ? 'border-accent text-accent' : 'border-line text-ink/60 hover:border-accent hover:text-accent'"
+            :aria-label="`Add ${ri.name} to shopping list`"
+            @click="addToShoppingList(ri)"
+          >{{ addedIds.has(ri.id) ? 'Added' : 'Add to list' }}</button>
         </li>
       </ul>
     </section>
@@ -198,6 +212,7 @@ import { useRecipesStore } from '../stores/recipes'
 import { useAuthStore } from '../stores/auth'
 import { ingredientsById as buildIngredientsById, stepIngredients as stepIngredientsFor, ingredientLabel, scaleFactor, ocadoSearchUrl } from '../lib/recipeIngredients'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
+import { useShoppingListStore } from '../stores/shoppingList'
 
 const route = useRoute()
 const router = useRouter()
@@ -233,6 +248,21 @@ const checkedIngredientIds = ref(new Set())
 function toggleChecked(id) {
   if (checkedIngredientIds.value.has(id)) checkedIngredientIds.value.delete(id)
   else checkedIngredientIds.value.add(id)
+}
+
+// Adds an ingredient to the shopping list at the currently viewed (scaled)
+// quantity. `addedIds` just drives the button's "Added" feedback for this
+// visit - the server is the source of truth, and adding again tops the line up.
+const shoppingList = useShoppingListStore()
+const addedIds = ref(new Set())
+
+async function addToShoppingList(ri) {
+  // One click per visit - a second would top the line up again and double it.
+  if (addedIds.value.has(ri.id)) return
+  const hasQuantity = ri.quantity !== null && ri.quantity !== undefined && ri.quantity !== ''
+  const scaled = hasQuantity ? Math.round(Number(ri.quantity) * factor.value * 100) / 100 : null
+  const result = await shoppingList.add({ name: ri.name, quantity: scaled, unit: ri.unit })
+  if (result.ok) addedIds.value = new Set([ ...addedIds.value, ri.id ])
 }
 
 const ingredientsById = computed(() => recipe.value ? buildIngredientsById(recipe.value) : new Map())
